@@ -10,9 +10,8 @@
     "typecheck": "tsc --noEmit",
     "validate": "tsx scripts/validate-content.ts",
     "seed": "tsx scripts/seed-mongo.ts",
-    "test": "tsx --test tests/security.test.ts",
-    "test:bun": "bun test tests",
-    "build:standalone": "bun scripts/build-standalone.ts"
+    "test": "tsx --test tests/content.test.ts tests/validate.test.ts tests/youtube.test.ts tests/security.test.ts",
+    "build:standalone": "tsx scripts/build-standalone.ts"
   },
   "dependencies": {
     "bcryptjs": "^3.0.3",

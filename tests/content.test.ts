@@ -1,4 +1,5 @@
-import { describe, expect, test } from "bun:test";
+import { describe, it } from "node:test";
+import assert from "node:assert/strict";
 import {
   getAllProjectsIncludingDrafts,
   getCategories,
@@ -9,44 +10,44 @@ import {
 } from "@/lib/projects";
 
 describe("portfolio content", () => {
-  test("has no validation errors", () => {
+  it("has no validation errors", () => {
     const errors = getContentIssues().filter((issue) => issue.level === "error");
-    expect(errors).toEqual([]);
+    assert.deepEqual(errors, []);
   });
 
-  test("drafts are excluded from published lists and routes", () => {
+  it("drafts are excluded from published lists and routes", () => {
     const drafts = getAllProjectsIncludingDrafts().filter((p) => p.status === "draft");
-    expect(drafts.length).toBeGreaterThan(0);
+    assert.ok(drafts.length > 0);
     for (const draft of drafts) {
-      expect(getPublishedProjects().some((p) => p.slug === draft.slug)).toBe(false);
-      expect(getProjectBySlug(draft.slug)).toBeUndefined();
+      assert.equal(getPublishedProjects().some((p) => p.slug === draft.slug), false);
+      assert.equal(getProjectBySlug(draft.slug), undefined);
     }
   });
 
-  test("categories are generated only from published projects", () => {
+  it("categories are generated only from published projects", () => {
     const categories = getCategories();
     const published = new Set(getPublishedProjects().map((p) => p.category));
-    expect(new Set(categories)).toEqual(published);
+    assert.deepEqual(new Set(categories), published);
   });
 
-  test("sample collection covers every page variant", () => {
+  it("sample collection covers every page variant", () => {
     const published = getPublishedProjects();
-    expect(published.some((p) => p.contentType === "video+documentation")).toBe(true);
-    expect(published.some((p) => p.contentType === "video")).toBe(true);
-    expect(published.some((p) => p.contentType === "documentation")).toBe(true);
-    expect(published.some((p) => p.videos.length > 1 && p.videos.every((v) => v.documentation))).toBe(true);
-    expect(published.some((p) => p.videos.some((v) => v.aspectRatio === "9:16"))).toBe(true);
+    assert.ok(published.some((p) => p.contentType === "video+documentation"));
+    assert.ok(published.some((p) => p.contentType === "video"));
+    assert.ok(published.some((p) => p.contentType === "documentation"));
+    assert.ok(published.some((p) => p.videos.length > 1 && p.videos.every((v) => v.documentation)));
+    assert.ok(published.some((p) => p.videos.some((v) => v.aspectRatio === "9:16")));
   });
 
-  test("documentation loads with headings for the table of contents", () => {
+  it("documentation loads with headings for the table of contents", () => {
     for (const project of getPublishedProjects()) {
       const docs = getProjectDocs(project);
-      if (docs.article) expect(docs.article.headings.length).toBeGreaterThan(0);
+      if (docs.article) assert.ok(docs.article.headings.length > 0);
       const ids = [
         ...(docs.article?.headings ?? []),
         ...docs.videoDocs.flatMap((doc) => doc?.headings ?? []),
       ].map((h) => h.id);
-      expect(new Set(ids).size).toBe(ids.length);
+      assert.equal(new Set(ids).size, ids.length);
     }
   });
 });

@@ -1,4 +1,5 @@
-import { describe, expect, test } from "bun:test";
+import { describe, it } from "node:test";
+import assert from "node:assert/strict";
 import type { Project } from "@/lib/types";
 import { validateProjects } from "@/lib/validate";
 
@@ -22,56 +23,63 @@ const errorsFor = (projects: Project[]) =>
   validateProjects(projects, context).filter((issue) => issue.level === "error");
 
 describe("validateProjects", () => {
-  test("accepts a valid documentation-only project", () => {
-    expect(errorsFor([base])).toEqual([]);
+  it("accepts a valid documentation-only project", () => {
+    assert.deepEqual(errorsFor([base]), []);
   });
 
-  test("accepts a valid video-only project", () => {
+  it("accepts a valid video-only project", () => {
     const { documentation: _omit, ...rest } = base;
-    expect(errorsFor([{ ...rest, videos: [{ title: "Demo", youtubeUrl: "https://youtu.be/M7lc1UVf-VE" }] }])).toEqual([]);
+    assert.deepEqual(
+      errorsFor([{ ...rest, videos: [{ title: "Demo", youtubeUrl: "https://youtu.be/M7lc1UVf-VE" }] }]),
+      []
+    );
   });
 
-  test("rejects duplicate slugs", () => {
+  it("rejects duplicate slugs", () => {
     const errors = errorsFor([base, { ...base }]);
-    expect(errors.some((e) => e.field === "slug" && e.message.includes("Duplicate"))).toBe(true);
+    assert.ok(errors.some((e) => e.field === "slug" && e.message.includes("Duplicate")));
   });
 
-  test("rejects badly formatted slugs", () => {
-    expect(errorsFor([{ ...base, slug: "Bad Slug" }]).some((e) => e.field === "slug")).toBe(true);
+  it("rejects badly formatted slugs", () => {
+    assert.ok(errorsFor([{ ...base, slug: "Bad Slug" }]).some((e) => e.field === "slug"));
   });
 
-  test("requires title and summary", () => {
+  it("requires title and summary", () => {
     const errors = errorsFor([{ ...base, title: "", summary: " " }]);
-    expect(errors.map((e) => e.field)).toEqual(expect.arrayContaining(["title", "summary"]));
+    const fields = errors.map((e) => e.field);
+    assert.ok(fields.includes("title"));
+    assert.ok(fields.includes("summary"));
   });
 
-  test("rejects unknown status and provenance", () => {
+  it("rejects unknown status and provenance", () => {
     const errors = errorsFor([{ ...base, status: "live" as never, provenance: "client" as never }]);
-    expect(errors.map((e) => e.field)).toEqual(expect.arrayContaining(["status", "provenance"]));
+    const fields = errors.map((e) => e.field);
+    assert.ok(fields.includes("status"));
+    assert.ok(fields.includes("provenance"));
   });
 
-  test("published projects need a working video or an article", () => {
+  it("published projects need a working video or an article", () => {
     const { documentation: _omit, ...rest } = base;
     const errors = errorsFor([{ ...rest, videos: [{ title: "Broken", youtubeUrl: "not a url" }] }]);
-    expect(errors.some((e) => e.field === "content")).toBe(true);
-    expect(errors.some((e) => e.field === "videos[0].youtubeUrl")).toBe(true);
+    assert.ok(errors.some((e) => e.field === "content"));
+    assert.ok(errors.some((e) => e.field === "videos[0].youtubeUrl"));
   });
 
-  test("drafts may hold unfinished video links (warning only)", () => {
+  it("drafts may hold unfinished video links (warning only)", () => {
     const issues = validateProjects(
       [{ ...base, status: "draft", videos: [{ title: "Later", youtubeUrl: "paste-link-here" }] }],
-      context,
+      context
     );
-    expect(issues.filter((i) => i.level === "error")).toEqual([]);
-    expect(issues.some((i) => i.level === "warning")).toBe(true);
+    assert.deepEqual(issues.filter((i) => i.level === "error"), []);
+    assert.ok(issues.some((i) => i.level === "warning"));
   });
 
-  test("rejects missing documentation files and path traversal", () => {
-    expect(errorsFor([{ ...base, documentation: "docs/missing.md" }]).some((e) => e.field === "documentation")).toBe(true);
-    expect(errorsFor([{ ...base, documentation: "../secret.md" }]).some((e) => e.field === "documentation")).toBe(true);
+  it("rejects missing documentation files and path traversal", () => {
+    assert.ok(errorsFor([{ ...base, documentation: "docs/missing.md" }]).some((e) => e.field === "documentation"));
+    assert.ok(errorsFor([{ ...base, documentation: "../secret.md" }]).some((e) => e.field === "documentation"));
   });
 
-  test("rejects invalid URLs and missing images", () => {
+  it("rejects invalid URLs and missing images", () => {
     const errors = errorsFor([
       {
         ...base,
@@ -81,11 +89,13 @@ describe("validateProjects", () => {
       },
     ]);
     const fields = errors.map((e) => e.field);
-    expect(fields).toEqual(expect.arrayContaining(["coverImage", "externalLinks[0]", "attachments[0]"]));
+    assert.ok(fields.includes("coverImage"));
+    assert.ok(fields.includes("externalLinks[0]"));
+    assert.ok(fields.includes("attachments[0]"));
   });
 
-  test("validates date format", () => {
-    expect(errorsFor([{ ...base, date: "June 2025" }]).some((e) => e.field === "date")).toBe(true);
-    expect(errorsFor([{ ...base, date: "2025-06" }])).toEqual([]);
+  it("validates date format", () => {
+    assert.ok(errorsFor([{ ...base, date: "June 2025" }]).some((e) => e.field === "date"));
+    assert.deepEqual(errorsFor([{ ...base, date: "2025-06" }]), []);
   });
 });
