@@ -1,0 +1,336 @@
+@import "tailwindcss";
+
+@theme {
+  --font-sans: var(--font-inter), ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+  --font-mono: ui-monospace, SFMono-Regular, "SF Mono", Menlo, Consolas, monospace;
+
+  /* Surfaces */
+  --color-canvas: #faf8f4;
+  --color-surface: #ffffff;
+  --color-tint: #f3efe8;
+  --color-mist: #edf4f2;
+
+  /* Text */
+  --color-ink: #191c20;
+  --color-ink-soft: #2c3137;
+  --color-body: #4c535b;
+  --color-muted: #646b73;
+  --color-faint: #8b9198;
+
+  /* Lines */
+  --color-line: #e6e1d8;
+  --color-line-strong: #d4cdc0;
+
+  /* Accent: deep teal */
+  --color-accent: #0e5f5b;
+  --color-accent-strong: #0a4744;
+  --color-accent-soft: #e1eeec;
+  --color-accent-line: #b9d6d2;
+
+  /* Notices */
+  --color-amber: #82540a;
+  --color-amber-soft: #fbf1df;
+  --color-amber-line: #ecd3a3;
+
+  --radius-card: 1rem;
+  --radius-control: 0.625rem;
+
+  --shadow-soft: 0 1px 2px rgb(25 28 32 / 0.04), 0 8px 24px -14px rgb(25 28 32 / 0.14);
+  --shadow-lift: 0 2px 4px rgb(25 28 32 / 0.04), 0 22px 44px -22px rgb(25 28 32 / 0.26);
+  --shadow-float: 0 1px 2px rgb(25 28 32 / 0.05), 0 12px 32px -12px rgb(25 28 32 / 0.18);
+
+  --animate-rise: rise 0.7s cubic-bezier(0.22, 1, 0.36, 1) both;
+  --animate-fade: fade 0.45s ease-out both;
+
+  @keyframes rise {
+    from { opacity: 0; transform: translateY(14px); }
+    to { opacity: 1; transform: none; }
+  }
+  @keyframes fade {
+    from { opacity: 0; }
+    to { opacity: 1; }
+  }
+}
+
+@layer base {
+  html {
+    background: var(--color-canvas);
+    color: var(--color-body);
+    -webkit-text-size-adjust: 100%;
+    text-rendering: optimizeLegibility;
+    scroll-padding-top: 6.5rem;
+  }
+
+  body {
+    font-family: var(--font-sans);
+    font-feature-settings: "cv11", "ss03";
+    background: var(--color-canvas);
+    min-height: 100vh;
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+  }
+
+  h1, h2, h3, h4 {
+    color: var(--color-ink);
+    text-wrap: balance;
+  }
+
+  p { text-wrap: pretty; }
+
+  ::selection { background: var(--color-accent-soft); color: var(--color-ink); }
+
+  /* Grid items default to min-width: auto, which lets wide tables, code or
+     truncated text push a column past the viewport. Zero specificity, so any
+     utility class still wins. */
+  :where(.grid) > * { min-width: 0; }
+
+  :focus-visible {
+    outline: 2px solid var(--color-accent);
+    outline-offset: 3px;
+    border-radius: 4px;
+  }
+
+  /* Programmatic focus after route changes should not draw a ring on headings. */
+  [tabindex="-1"]:focus { outline: none; }
+
+  @media (prefers-reduced-motion: no-preference) {
+    html:not([data-scroll-behavior="smooth"]) { scroll-behavior: smooth; }
+  }
+}
+
+@layer components {
+  .container-page {
+    width: 100%;
+    max-width: 78rem;
+    margin-inline: auto;
+    padding-inline: 1.25rem;
+  }
+  @media (min-width: 640px) { .container-page { padding-inline: 2rem; } }
+
+  .eyebrow {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.625rem;
+    font-size: 0.75rem;
+    font-weight: 600;
+    letter-spacing: 0.14em;
+    text-transform: uppercase;
+    color: var(--color-muted);
+  }
+  .eyebrow::before {
+    content: "";
+    width: 1.5rem;
+    height: 1px;
+    background: currentColor;
+    opacity: 0.6;
+  }
+
+  .btn {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 0.5rem;
+    min-height: 2.875rem;
+    padding: 0.625rem 1.25rem;
+    border-radius: var(--radius-control);
+    font-size: 0.9375rem;
+    font-weight: 600;
+    line-height: 1.2;
+    transition: background-color 0.2s, color 0.2s, border-color 0.2s, box-shadow 0.2s, transform 0.15s;
+    white-space: nowrap;
+  }
+  .btn:active { transform: translateY(1px); }
+  .btn-primary { background: var(--color-ink); color: #fff; box-shadow: 0 1px 2px rgb(0 0 0 / 0.12); }
+  .btn-primary:hover { background: var(--color-accent-strong); }
+  .btn-accent { background: var(--color-accent); color: #fff; }
+  .btn-accent:hover { background: var(--color-accent-strong); }
+  .btn-secondary { background: var(--color-surface); color: var(--color-ink); border: 1px solid var(--color-line-strong); }
+  .btn-secondary:hover { border-color: var(--color-ink); }
+  .btn-sm { min-height: 2.5rem; padding: 0.5rem 0.95rem; font-size: 0.875rem; }
+
+  .link-arrow {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.375rem;
+    font-weight: 600;
+    color: var(--color-ink);
+    text-decoration: underline;
+    text-decoration-color: var(--color-line-strong);
+    text-underline-offset: 0.3em;
+    text-decoration-thickness: 1px;
+    transition: text-decoration-color 0.2s, color 0.2s;
+  }
+  .link-arrow:hover { text-decoration-color: var(--color-accent); color: var(--color-accent); }
+  .link-arrow svg { transition: transform 0.2s; }
+  .link-arrow:hover svg { transform: translateX(3px); }
+
+  .card {
+    background: var(--color-surface);
+    border: 1px solid var(--color-line);
+    border-radius: var(--radius-card);
+    box-shadow: var(--shadow-soft);
+  }
+
+  .chip {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.375rem;
+    border-radius: 999px;
+    border: 1px solid var(--color-line);
+    background: var(--color-surface);
+    padding: 0.25rem 0.65rem;
+    font-size: 0.78125rem;
+    font-weight: 500;
+    color: var(--color-body);
+    line-height: 1.3;
+  }
+
+  .grid-lines {
+    background-image:
+      linear-gradient(to right, rgb(25 28 32 / 0.045) 1px, transparent 1px),
+      linear-gradient(to bottom, rgb(25 28 32 / 0.045) 1px, transparent 1px);
+    background-size: 72px 72px;
+    mask-image: radial-gradient(ellipse 70% 60% at 50% 30%, #000 30%, transparent 80%);
+  }
+
+  .skip-link {
+    position: absolute;
+    left: 1rem;
+    top: -4rem;
+    z-index: 100;
+    background: var(--color-ink);
+    color: #fff;
+    padding: 0.75rem 1rem;
+    border-radius: var(--radius-control);
+    font-weight: 600;
+    transition: top 0.2s;
+  }
+  .skip-link:focus { top: 1rem; }
+
+  .sr-only-focusable:not(:focus) {
+    position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap;
+  }
+}
+
+/* --------------------------------------------------------------------------
+   Long-form documentation
+   -------------------------------------------------------------------------- */
+@layer components {
+  .prose-doc {
+    color: var(--color-body);
+    font-size: 1.0625rem;
+    line-height: 1.75;
+  }
+  .prose-doc > * + * { margin-top: 1.25em; }
+  .prose-doc .md-h2 {
+    font-size: 1.5rem;
+    line-height: 1.3;
+    font-weight: 650;
+    letter-spacing: -0.02em;
+    margin-top: 2.6em;
+    padding-top: 0.25em;
+  }
+  .prose-doc .md-h3 {
+    font-size: 1.1875rem;
+    line-height: 1.4;
+    font-weight: 650;
+    letter-spacing: -0.01em;
+    margin-top: 2em;
+  }
+  .prose-doc .md-h4 { font-size: 1.0625rem; font-weight: 650; margin-top: 1.75em; }
+  .prose-doc.prose-compact .md-h2 { font-size: 1.25rem; margin-top: 2em; }
+  .prose-doc.prose-compact .md-h3 { font-size: 1.0625rem; }
+  .prose-doc > :first-child { margin-top: 0; }
+  .prose-doc :is(.md-h2, .md-h3, .md-h4) + * { margin-top: 0.75em; }
+  .prose-doc .heading-anchor {
+    margin-left: 0.4em;
+    color: var(--color-faint);
+    text-decoration: none;
+    font-weight: 500;
+    opacity: 0;
+    transition: opacity 0.15s, color 0.15s;
+  }
+  .prose-doc :is(h2, h3, h4, h5, h6):hover .heading-anchor,
+  .prose-doc .heading-anchor:focus-visible { opacity: 1; }
+  .prose-doc .heading-anchor:hover { color: var(--color-accent); }
+  @media (hover: none) { .prose-doc .heading-anchor { opacity: 0.6; } }
+
+  .prose-doc a:not(.heading-anchor) {
+    color: var(--color-accent);
+    text-decoration: underline;
+    text-decoration-color: var(--color-accent-line);
+    text-underline-offset: 0.2em;
+  }
+  .prose-doc a:not(.heading-anchor):hover { text-decoration-color: currentColor; }
+  .prose-doc strong { color: var(--color-ink); font-weight: 650; }
+  .prose-doc ul, .prose-doc ol { padding-left: 1.4em; }
+  .prose-doc ul { list-style: disc; }
+  .prose-doc ol { list-style: decimal; }
+  .prose-doc li + li { margin-top: 0.45em; }
+  .prose-doc li::marker { color: var(--color-faint); }
+  .prose-doc blockquote {
+    border-left: 3px solid var(--color-accent-line);
+    padding: 0.25em 0 0.25em 1.1em;
+    color: var(--color-ink-soft);
+  }
+  .prose-doc :not(pre) > code {
+    font-family: var(--font-mono);
+    font-size: 0.86em;
+    background: var(--color-tint);
+    border: 1px solid var(--color-line);
+    border-radius: 6px;
+    padding: 0.1em 0.38em;
+    color: var(--color-ink);
+    overflow-wrap: anywhere;
+  }
+  .prose-doc hr { border: 0; border-top: 1px solid var(--color-line); margin-block: 2.5em; }
+
+  .prose-doc .table-wrap {
+    overflow-x: auto;
+    border: 1px solid var(--color-line);
+    border-radius: 0.75rem;
+    background: var(--color-surface);
+  }
+  .prose-doc table { width: 100%; border-collapse: collapse; font-size: 0.9375rem; line-height: 1.55; }
+  .prose-doc thead th {
+    background: var(--color-tint);
+    color: var(--color-ink);
+    font-weight: 600;
+    text-align: left;
+    font-size: 0.8125rem;
+    letter-spacing: 0.02em;
+  }
+  .prose-doc th, .prose-doc td { padding: 0.7rem 1rem; vertical-align: top; min-width: 8rem; }
+  .prose-doc tbody tr + tr td { border-top: 1px solid var(--color-line); }
+
+  .prose-doc figure { margin-block: 2em; }
+  .prose-doc figure img {
+    width: 100%;
+    border-radius: 0.875rem;
+    border: 1px solid var(--color-line);
+    background: var(--color-surface);
+  }
+  .prose-doc figcaption { margin-top: 0.75rem; font-size: 0.875rem; color: var(--color-muted); line-height: 1.55; }
+}
+
+/* --------------------------------------------------------------------------
+   Reveal on scroll. Content is visible by default; the html.reveal-on class
+   is only added by an inline script when motion is allowed, and removed again
+   if the observer never starts.
+   -------------------------------------------------------------------------- */
+html.reveal-on [data-reveal]:not(.is-visible) {
+  opacity: 0;
+  transform: translateY(18px);
+}
+html.reveal-on [data-reveal] {
+  transition: opacity 0.8s cubic-bezier(0.22, 1, 0.36, 1), transform 0.8s cubic-bezier(0.22, 1, 0.36, 1);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
+}

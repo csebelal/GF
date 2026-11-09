@@ -1,0 +1,43 @@
+{
+  "name": "afrin-chishti-portfolio",
+  "version": "1.0.0",
+  "private": true,
+  "description": "Portfolio website for Afrin Akter Chishti, Salesforce Administrator.",
+  "scripts": {
+    "dev": "next dev",
+    "build": "next build",
+    "start": "next start",
+    "typecheck": "tsc --noEmit",
+    "validate": "tsx scripts/validate-content.ts",
+    "seed": "tsx scripts/seed-mongo.ts",
+    "test": "tsx --test tests/security.test.ts",
+    "test:bun": "bun test tests",
+    "build:standalone": "bun scripts/build-standalone.ts"
+  },
+  "dependencies": {
+    "bcryptjs": "^3.0.3",
+    "github-slugger": "2.0.0",
+    "jose": "^6.2.16",
+    "mdast-util-to-string": "4.0.0",
+    "mongoose": "^9.12.0",
+    "next": "16.4.3",
+    "react": "19.3.1",
+    "react-dom": "19.3.1",
+    "react-markdown": "10.1.0",
+    "rehype-slug": "6.0.0",
+    "remark-gfm": "4.0.1",
+    "remark-parse": "11.0.0",
+    "unified": "11.0.5"
+  },
+  "devDependencies": {
+    "@tailwindcss/postcss": "4.3.5",
+    "@types/bcryptjs": "^2.4.6",
+    "@types/node": "22.15.3",
+    "@types/react": "19.3.0",
+    "@types/react-dom": "19.2.3",
+    "dotenv": "^18.0.10",
+    "tailwindcss": "4.3.5",
+    "tsx": "^4.23.15",
+    "typescript": "5.9.3"
+  }
+}

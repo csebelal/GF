@@ -1,0 +1,80 @@
+import { NextResponse } from "next/server";
+import { revalidatePath } from "next/cache";
+import { getAuthenticatedAdmin } from "@/lib/auth/session";
+import { connectDB } from "@/lib/db/connection";
+import { SiteProfileModel } from "@/lib/db/models/SiteProfile";
+import { invalidateRepositoryCache, getDbProfile } from "@/lib/db/repository";
+import { sanitizeNoSql } from "@/lib/security/sanitize";
+import { logSecurityEvent } from "@/lib/security/audit";
+
+export async function GET() {
+  const admin = await getAuthenticatedAdmin();
+  if (!admin) {
+    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+  }
+
+  const profile = await getDbProfile();
+  return NextResponse.json(profile);
+}
+
+export async function PUT(request: Request) {
+  try {
+    const admin = await getAuthenticatedAdmin();
+    if (!admin) {
+      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    }
+
+    let rawData: any;
+    try {
+      rawData = await request.json();
+    } catch {
+      return NextResponse.json({ error: "Invalid JSON request body." }, { status: 400 });
+    }
+
+    if (!rawData || typeof rawData !== "object") {
+      return NextResponse.json({ error: "Invalid payload." }, { status: 400 });
+    }
+
+    const data = sanitizeNoSql(rawData);
+    await connectDB();
+
+    const existing = await SiteProfileModel.findOne({});
+    let updated;
+
+    if (existing) {
+      updated = await SiteProfileModel.findByIdAndUpdate(
+        existing._id,
+        { $set: data },
+        {
+          new: true,
+          runValidators: true,
+        }
+      );
+    } else {
+      updated = await SiteProfileModel.create(data);
+    }
+
+    invalidateRepositoryCache();
+    try {
+      revalidatePath("/", "layout");
+      revalidatePath("/about");
+      revalidatePath("/contact");
+    } catch (e) {
+      console.warn("Revalidation notice:", e);
+    }
+
+    logSecurityEvent("PROFILE_UPDATED", {
+      req: request,
+      user: admin.email,
+      status: "SUCCESS",
+    });
+
+    return NextResponse.json({ success: true, profile: updated });
+  } catch (error: any) {
+    console.error("Profile update error:", error);
+    return NextResponse.json(
+      { error: "An unexpected error occurred while updating profile." },
+      { status: 500 }
+    );
+  }
+}

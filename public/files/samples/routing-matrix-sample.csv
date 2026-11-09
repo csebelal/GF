@@ -1,0 +1,6 @@
+Country_Group__c,Min_Employees__c,Queue_Developer_Name__c,Priority__c
+EMEA,200,EMEA_Mid_Market,10
+EMEA,0,EMEA_SMB,20
+North America,0,NA_Sales,10
+APAC,0,APAC_Sales,10
+*,0,Sales_Ops_Fallback,99
