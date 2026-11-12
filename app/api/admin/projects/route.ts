@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 import { revalidatePath } from "next/cache";
-import { getAuthenticatedAdminLean } from "@/lib/auth/session";
+import { getAuthenticatedAdminLean, requireAdminRole } from "@/lib/auth/session";
 import { connectDB } from "@/lib/db/connection";
 import { ProjectModel } from "@/lib/db/models/Project";
 import { invalidateRepositoryCache, getDbProjects } from "@/lib/db/repository";
@@ -38,10 +38,8 @@ export async function GET(request: Request) {
 
 export async function POST(request: Request) {
   try {
-    const admin = await getAuthenticatedAdminLean();
-    if (!admin) {
-      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-    }
+    const { admin, errorResponse } = await requireAdminRole(["admin", "editor"], request);
+    if (errorResponse) return errorResponse;
 
     let rawData: any;
     try {

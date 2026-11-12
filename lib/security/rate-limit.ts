@@ -151,4 +151,25 @@ export const RateLimiters = {
   /** General Admin API: 120 requests per minute */
   adminApi: (ip: string, req?: Request) =>
     checkRateLimit(`admin_api:${ip}`, { max: 120, windowSeconds: 60 }, req),
+
+  /** Public analytics beacon: 60 events per minute per IP */
+  analyticsTrack: (ip: string, req?: Request) =>
+    checkRateLimit(`analytics:${ip}`, { max: 60, windowSeconds: 60 }, req),
 };
+
+export function getRateLimitStats(): { activeBuckets: number; lockedBuckets: number } {
+  const now = Date.now();
+  let activeBuckets = 0;
+  let lockedBuckets = 0;
+
+  for (const record of store.values()) {
+    if (record.lockedUntil && record.lockedUntil > now) {
+      lockedBuckets += 1;
+      activeBuckets += 1;
+    } else if (record.resetAt > now) {
+      activeBuckets += 1;
+    }
+  }
+
+  return { activeBuckets, lockedBuckets };
+}

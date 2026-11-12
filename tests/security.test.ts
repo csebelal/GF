@@ -228,4 +228,25 @@ describe("Security Suite: JWT Session Security & Revocation", () => {
     const result = await verifySessionToken(tampered);
     assert.equal(result, null);
   });
+
+  it("supports editor and viewer roles in JWT tokens and rejects unknown roles", async () => {
+    const { isValidAdminRole, hasRequiredRole } = await import("@/lib/auth/roles");
+    assert.equal(isValidAdminRole("admin"), true);
+    assert.equal(isValidAdminRole("editor"), true);
+    assert.equal(isValidAdminRole("viewer"), true);
+    assert.equal(isValidAdminRole("superadmin"), false);
+
+    assert.equal(hasRequiredRole("editor", ["admin", "editor"]), true);
+    assert.equal(hasRequiredRole("viewer", ["admin", "editor"]), false);
+    assert.equal(hasRequiredRole("editor", ["admin"]), false);
+
+    const editorToken = await createSessionToken({
+      email: "editor@portfolio.local",
+      name: "Editor User",
+      role: "editor",
+    });
+    const verified = await verifySessionToken(editorToken);
+    assert.ok(verified);
+    assert.equal(verified.role, "editor");
+  });
 });

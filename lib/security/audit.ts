@@ -22,7 +22,12 @@ export type AuditAction =
   | "FILE_UPLOAD_BLOCKED"
   | "RATE_LIMIT_TRIGGERED"
   | "CSRF_DETECTED"
-  | "UNAUTHORIZED_ACCESS";
+  | "UNAUTHORIZED_ACCESS"
+  | "FORBIDDEN_ACCESS"
+  | "ADMIN_USER_CREATED"
+  | "ADMIN_USER_UPDATED"
+  | "ADMIN_USER_DELETED"
+  | "CACHE_INVALIDATED";
 
 export interface AuditLogEntry {
   timestamp: string;
@@ -94,4 +99,36 @@ export function logSecurityEvent(
   // Structured security log output
   const level = entry.status === "FAILURE" || entry.status === "BLOCKED" ? "warn" : "info";
   console[level](`[SECURITY AUDIT] ${JSON.stringify(entry)}`);
+
+  pushAuditBuffer(entry);
+}
+
+const MAX_RECENT_EVENTS = 50;
+
+declare global {
+  // eslint-disable-next-line no-var
+  var __afrinSecurityAuditLog: AuditLogEntry[] | undefined;
+}
+
+function getAuditBuffer(): AuditLogEntry[] {
+  if (!globalThis.__afrinSecurityAuditLog) {
+    globalThis.__afrinSecurityAuditLog = [];
+  }
+  return globalThis.__afrinSecurityAuditLog;
+}
+
+function pushAuditBuffer(entry: AuditLogEntry) {
+  const buf = getAuditBuffer();
+  buf.unshift(entry);
+  if (buf.length > MAX_RECENT_EVENTS) {
+    buf.length = MAX_RECENT_EVENTS;
+  }
+}
+
+export function getRecentSecurityEvents(limit = 10): AuditLogEntry[] {
+  return getAuditBuffer().slice(0, Math.max(1, limit));
+}
+
+export function clearRecentSecurityEvents() {
+  globalThis.__afrinSecurityAuditLog = [];
 }

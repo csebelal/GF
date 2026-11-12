@@ -114,16 +114,17 @@ export async function POST(request: Request) {
       status: "SUCCESS",
     });
 
+    const userRole = admin.role || "admin";
     const token = await createSessionToken({
       email: admin.email,
       name: admin.name,
-      role: "admin",
+      role: userRole,
       tokenVersion: admin.tokenVersion || 0,
     });
 
     const response = NextResponse.json({
       success: true,
-      user: { email: admin.email, name: admin.name },
+      user: { email: admin.email, name: admin.name, role: userRole },
     });
 
     response.cookies.set({

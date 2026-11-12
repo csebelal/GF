@@ -1,20 +1,24 @@
 import { SignJWT, jwtVerify } from "jose";
 import { cookies } from "next/headers";
+import { NextResponse } from "next/server";
 import crypto from "node:crypto";
 import type { HydratedDocument } from "mongoose";
 import { getAuthSecret } from "@/lib/security/config";
 import { hashPassword, verifyPassword } from "@/lib/security/password";
+import { logSecurityEvent } from "@/lib/security/audit";
 import { connectDB } from "@/lib/db/connection";
 import { AdminModel, type IAdmin } from "@/lib/db/models/Admin";
+import { hasRequiredRole, isValidAdminRole, type AdminRole } from "./roles";
 
 export { hashPassword, verifyPassword };
+export type { AdminRole };
 
 export const SESSION_COOKIE_NAME = "admin_session";
 
 export interface SessionPayload {
   email: string;
   name: string;
-  role: "admin";
+  role: AdminRole;
   tokenVersion?: number;
   jti?: string;
   [key: string]: unknown;
@@ -23,7 +27,7 @@ export interface SessionPayload {
 export interface CreateSessionInput {
   email: string;
   name: string;
-  role?: "admin";
+  role?: AdminRole;
   tokenVersion?: number;
 }
 
@@ -34,11 +38,12 @@ export interface CreateSessionInput {
 export async function createSessionToken(payload: CreateSessionInput): Promise<string> {
   const secret = getAuthSecret();
   const jti = crypto.randomUUID();
+  const role: AdminRole = isValidAdminRole(payload.role) ? payload.role : "viewer";
 
   return new SignJWT({
     email: payload.email.toLowerCase().trim(),
     name: payload.name.trim(),
-    role: "admin",
+    role,
     tokenVersion: payload.tokenVersion ?? 0,
     jti,
   })
@@ -61,7 +66,7 @@ export async function verifySessionToken(token: string): Promise<SessionPayload 
     if (
       typeof payload.email !== "string" ||
       typeof payload.name !== "string" ||
-      payload.role !== "admin"
+      !isValidAdminRole(payload.role)
     ) {
       return null;
     }
@@ -90,7 +95,7 @@ export interface LeanAdminSession {
   _id: unknown;
   email: string;
   name: string;
-  role: "admin";
+  role: AdminRole;
   tokenVersion?: number;
   lastLogin?: Date;
 }
@@ -151,4 +156,41 @@ export async function getAuthenticatedAdmin(): Promise<HydratedDocument<IAdmin> 
   } catch {
     return null;
   }
+}
+
+/**
+ * Verifies both authentication and RBAC role authorization for API routes.
+ */
+export async function requireAdminRole(
+  allowedRoles: readonly AdminRole[],
+  req?: Request
+): Promise<
+  | { admin: LeanAdminSession; errorResponse: null }
+  | { admin: null; errorResponse: NextResponse }
+> {
+  const admin = await getAuthenticatedAdminLean();
+  if (!admin) {
+    return {
+      admin: null,
+      errorResponse: NextResponse.json({ error: "Unauthorized" }, { status: 401 }),
+    };
+  }
+
+  if (!hasRequiredRole(admin.role, allowedRoles)) {
+    logSecurityEvent("FORBIDDEN_ACCESS", {
+      req,
+      user: admin.email,
+      status: "BLOCKED",
+      details: { role: admin.role, required: allowedRoles },
+    });
+    return {
+      admin: null,
+      errorResponse: NextResponse.json(
+        { error: "Forbidden: Insufficient role permissions" },
+        { status: 403 }
+      ),
+    };
+  }
+
+  return { admin, errorResponse: null };
 }

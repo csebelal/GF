@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 import { revalidatePath } from "next/cache";
-import { getAuthenticatedAdminLean } from "@/lib/auth/session";
+import { requireAdminRole } from "@/lib/auth/session";
 import { reorderDbProjects } from "@/lib/db/repository";
 import { logSecurityEvent } from "@/lib/security/audit";
 
@@ -8,10 +8,8 @@ const SLUG_PATTERN = /^[a-z0-9]+(?:-[a-z0-9]+)*$/;
 
 export async function POST(request: Request) {
   try {
-    const admin = await getAuthenticatedAdminLean();
-    if (!admin) {
-      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-    }
+    const { admin, errorResponse } = await requireAdminRole(["admin", "editor"], request);
+    if (errorResponse) return errorResponse;
 
     let body: any;
     try {

@@ -2,8 +2,8 @@
 
 ## Audit Log
 
-- **Last Audit Date**: 2026-11-10
-- **Scope**: Full codebase (`app/`, `components/`, `lib/`, `scripts/`, `middleware.ts`, `next.config.ts`, `package.json`, `.gitignore`)
+- **Last Audit Date**: 2026-11-12
+- **Scope**: Full codebase (`app/`, `components/`, `lib/`, `scripts/`, `middleware.ts`, `next.config.ts`, `package.json`, `.gitignore`), including multi-user RBAC & first-party traffic analytics.
 - **Methodology**: OWASP Top 10 static analysis, authentication/authorization review, injection & XSS sink inspection, file upload validation review, dependency audit (`npm audit`), and regression test execution.
 
 ---
@@ -38,7 +38,8 @@
 
 - 🟢 **Secrets & Repository Hygiene**: No hardcoded secrets, API keys, or `.env` files tracked in git (`.gitignore` excludes `.env`, `.env.*`, `.env*.local`, `public/uploads/*`).
 - 🟢 **Authentication & Session Management**: `jose` HS256 JWTs with `httpOnly`, `sameSite: "lax"`, `secure` in production, `tokenVersion` revocation on password change, and `bcryptjs` (12 rounds) with complexity/common-password checks.
-- 🟢 **Access Control**: `/admin/*` and `/api/admin/*` protected by `middleware.ts` plus server-side `getAuthenticatedAdmin()` / `getAuthenticatedAdminLean()` DB verification on API routes.
+- 🟢 **Access Control & RBAC**: `/admin/*` and `/api/admin/*` protected by `middleware.ts` plus server-side `getAuthenticatedAdmin()` / `requireAdminRole()` DB verification (`admin`, `editor`, `viewer` roles). User management (`/api/admin/users*`) and system cache flush (`/api/admin/system/revalidate`) require `admin`; content/media mutations require `admin` or `editor`; self-deletion, last-admin removal/demotion, and `passwordHash` projection leaks are blocked, and role/password updates increment `tokenVersion` to revoke prior sessions.
+- 🟢 **Privacy-First Analytics**: `POST /api/analytics/track` filters bots, excludes `/admin` and `/api` routes, rate-limits per IP (`60/min`), encodes MongoDB Map keys to prevent nested operator injection, and stores daily-salted truncated SHA-256 hashes without raw IP addresses or cookies.
 - 🟢 **NoSQL Injection & Mass Assignment**: `sanitizeNoSql()` strips `$` operators and dotted keys; `filterProjectPayload()` whitelists project fields.
 - 🟢 **Open Redirect Protection**: `sanitizeRedirectPath()` rejects protocol-relative (`//`), external URLs, CRLF, null bytes, and backslashes.
 - 🟢 **Supply Chain (`npm audit`)**: `npm audit` and `npm audit --omit=dev` reported `0 vulnerabilities`.
@@ -47,6 +48,7 @@
 
 ## Verification
 
-- `npm test`: **61/61 tests passed** across 10 suites (including new upload extension and URL sanitization regression tests in `tests/security.test.ts`).
+- `npm test`: **77/77 tests passed** across 14 suites (including RBAC, analytics helpers, upload extension, and URL sanitization regression tests).
 - `npm run typecheck`: passed (`tsc --noEmit`).
-- `npm audit`: **0 vulnerabilities**.
+- `npm run build`: passed (`next build`).
+- `npm audit --omit=dev`: **0 vulnerabilities**.

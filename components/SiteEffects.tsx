@@ -18,6 +18,34 @@ declare global {
 export function SiteEffects() {
   const pathname = usePathname();
   const lastPathname = useRef(pathname);
+  const lastTrackedPath = useRef<string | null>(null);
+
+  useEffect(() => {
+    if (!pathname || pathname.startsWith("/admin")) return;
+    if (lastTrackedPath.current === pathname) return;
+    lastTrackedPath.current = pathname;
+
+    const payload = JSON.stringify({
+      pathname,
+      referrer: typeof document !== "undefined" ? document.referrer : "",
+    });
+
+    try {
+      if (typeof navigator !== "undefined" && typeof navigator.sendBeacon === "function") {
+        const blob = new Blob([payload], { type: "application/json" });
+        navigator.sendBeacon("/api/analytics/track", blob);
+      } else {
+        void fetch("/api/analytics/track", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: payload,
+          keepalive: true,
+        });
+      }
+    } catch {
+      // Ignore client beacon errors
+    }
+  }, [pathname]);
 
   useEffect(() => {
     if (pathname?.startsWith("/admin")) return;

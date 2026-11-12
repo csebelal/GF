@@ -134,6 +134,36 @@ export const ChevronDown = (p: IconProps) => (
 export const ChevronUp = (p: IconProps) => (
   <Base {...p}><path d="m18 15-6-6-6 6" /></Base>
 );
+export const Activity = (p: IconProps) => (
+  <Base {...p}><path d="M22 12h-4l-3 7-6-14-3 7H2" /></Base>
+);
+export const TrendingDown = (p: IconProps) => (
+  <Base {...p}><path d="m3 7 6 6 4-4 8 8M15 17h6v-6" /></Base>
+);
+export const RefreshCw = (p: IconProps) => (
+  <Base {...p}><path d="M21 12a9 9 0 0 1-9 9 9 9 0 0 1-8.3-5.5M3 12a9 9 0 0 1 9-9 9 9 0 0 1 8.3 5.5" /><path d="M21 3v5.5h-5.5M3 21v-5.5h5.5" /></Base>
+);
+export const Laptop = (p: IconProps) => (
+  <Base {...p}><rect x="4" y="5" width="16" height="11" rx="2" /><path d="M2 19h20" /></Base>
+);
+export const Smartphone = (p: IconProps) => (
+  <Base {...p}><rect x="7" y="3" width="10" height="18" rx="2" /><path d="M12 17.5h.01" /></Base>
+);
+export const Tablet = (p: IconProps) => (
+  <Base {...p}><rect x="5" y="3" width="14" height="18" rx="2" /><path d="M12 17.5h.01" /></Base>
+);
+export const Server = (p: IconProps) => (
+  <Base {...p}><rect x="3" y="4" width="18" height="6" rx="1.5" /><rect x="3" y="14" width="18" height="6" rx="1.5" /><path d="M7 7h.01M7 17h.01" /></Base>
+);
+export const Cpu = (p: IconProps) => (
+  <Base {...p}><rect x="6" y="6" width="12" height="12" rx="2" /><rect x="9.5" y="9.5" width="5" height="5" /><path d="M9 3v3M15 3v3M9 18v3M15 18v3M3 9h3M3 15h3M18 9h3M18 15h3" /></Base>
+);
+export const CheckCircle2 = (p: IconProps) => (
+  <Base {...p}><circle cx="12" cy="12" r="9" /><path d="m8.5 12.5 2.5 2.5 4.5-5" /></Base>
+);
+export const AlertTriangle = (p: IconProps) => (
+  <Base {...p}><path d="M10.3 3.9 2.2 18a2 2 0 0 0 1.7 3h16.2a2 2 0 0 0 1.7-3L13.7 3.9a2 2 0 0 0-3.4 0Z" /><path d="M12 9v4.5M12 17h.01" /></Base>
+);
 
 /* Expertise icons --------------------------------------------------------- */
 export const IconAutomation = (p: IconProps) => (
@@ -160,6 +190,10 @@ export const IconRelease = (p: IconProps) => (
 export const IconAI = (p: IconProps) => (
   <Base {...p}><path d="M10 4.5 11.6 9l4.4 1.6-4.4 1.6L10 16.7l-1.6-4.5L4 10.6 8.4 9Z" /><path d="M17.5 14.5l.8 2.2 2.2.8-2.2.8-.8 2.2-.8-2.2-2.2-.8 2.2-.8Z" /></Base>
 );
+
+export const Database = IconData;
+export const ShieldCheck = IconAccess;
+export const Users = IconAdoption;
 
 export const expertiseIcons = {
   automation: IconAutomation,

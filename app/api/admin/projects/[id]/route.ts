@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 import { revalidatePath } from "next/cache";
-import { getAuthenticatedAdminLean } from "@/lib/auth/session";
+import { getAuthenticatedAdminLean, requireAdminRole } from "@/lib/auth/session";
 import { connectDB } from "@/lib/db/connection";
 import { ProjectModel } from "@/lib/db/models/Project";
 import { invalidateRepositoryCache } from "@/lib/db/repository";
@@ -55,10 +55,8 @@ export async function GET(request: Request, { params }: RouteProps) {
 
 export async function PUT(request: Request, { params }: RouteProps) {
   try {
-    const admin = await getAuthenticatedAdminLean();
-    if (!admin) {
-      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-    }
+    const { admin, errorResponse } = await requireAdminRole(["admin", "editor"], request);
+    if (errorResponse) return errorResponse;
 
     const { id } = await params;
     const parsed = validateIdParam(id);
@@ -155,10 +153,8 @@ export async function PUT(request: Request, { params }: RouteProps) {
 
 export async function DELETE(request: Request, { params }: RouteProps) {
   try {
-    const admin = await getAuthenticatedAdminLean();
-    if (!admin) {
-      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-    }
+    const { admin, errorResponse } = await requireAdminRole(["admin", "editor"], request);
+    if (errorResponse) return errorResponse;
 
     const { id } = await params;
     const parsed = validateIdParam(id);

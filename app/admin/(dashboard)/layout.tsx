@@ -254,7 +254,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
       {/* Main Content Area */}
       <div className="flex min-w-0 flex-1 flex-col">
         {/* Top Header */}
-        <header className="sticky top-0 z-30 flex h-16 items-center justify-between border-b border-[#e6e1d8] bg-white/95 px-4 backdrop-blur-sm sm:px-8">
+        <header className="sticky top-0 z-30 flex h-14 items-center justify-between border-b border-[#e6e1d8] bg-white/95 px-3 backdrop-blur-sm sm:px-5">
           <div className="flex items-center gap-3">
             <button
               type="button"
@@ -323,8 +323,8 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
         )}
 
         {/* Main Content Container */}
-        <main id="admin-main" tabIndex={-1} className="flex-1 p-4 sm:p-8">
-          <div className="mx-auto w-full max-w-6xl">{children}</div>
+        <main id="admin-main" tabIndex={-1} className="flex-1 px-3 py-4 sm:px-5 sm:py-5">
+          <div className="mx-auto w-full max-w-[1600px]">{children}</div>
         </main>
       </div>
     </div>

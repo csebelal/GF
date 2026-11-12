@@ -131,6 +131,53 @@ export function invalidateRepositoryCache() {
   repoStore.inflightExpertise = null;
 }
 
+export interface CacheSlotDiagnostic {
+  status: "fresh" | "stale" | "empty";
+  expiresInSeconds: number;
+  inflight: boolean;
+}
+
+export interface RepositoryCacheDiagnostics {
+  ttlSeconds: number;
+  fallbackTtlSeconds: number;
+  slots: {
+    projects: CacheSlotDiagnostic;
+    profile: CacheSlotDiagnostic;
+    experience: CacheSlotDiagnostic;
+    expertise: CacheSlotDiagnostic;
+  };
+}
+
+function inspectCacheSlot<T>(
+  slot: CacheSlot<T> | null,
+  inflight: Promise<T> | null,
+  now: number
+): CacheSlotDiagnostic {
+  if (!slot) {
+    return { status: "empty", expiresInSeconds: 0, inflight: Boolean(inflight) };
+  }
+  const remainingMs = slot.expiresAt - now;
+  return {
+    status: remainingMs > 0 ? "fresh" : "stale",
+    expiresInSeconds: Math.max(0, Math.ceil(remainingMs / 1000)),
+    inflight: Boolean(inflight),
+  };
+}
+
+export function getRepositoryCacheDiagnostics(): RepositoryCacheDiagnostics {
+  const now = Date.now();
+  return {
+    ttlSeconds: Math.round(CACHE_TTL_MS / 1000),
+    fallbackTtlSeconds: Math.round(FALLBACK_TTL_MS / 1000),
+    slots: {
+      projects: inspectCacheSlot(repoStore.projectsCache, repoStore.inflightProjects, now),
+      profile: inspectCacheSlot(repoStore.profileCache, repoStore.inflightProfile, now),
+      experience: inspectCacheSlot(repoStore.experienceCache, repoStore.inflightExperience, now),
+      expertise: inspectCacheSlot(repoStore.expertiseCache, repoStore.inflightExpertise, now),
+    },
+  };
+}
+
 function toPlain<T>(value: T): T {
   if (value === null || value === undefined || typeof value !== "object") {
     return value;
