@@ -7,6 +7,7 @@ import { PublicOnly } from "@/components/PublicOnly";
 import { SiteEffects } from "@/components/SiteEffects";
 import { profile as staticProfile, site } from "@/content/site";
 import { getDbProfile } from "@/lib/db/repository";
+import { serializeJsonLd } from "@/lib/seo/schema";
 import "./globals.css";
 
 const inter = Inter({
@@ -16,8 +17,13 @@ const inter = Inter({
   adjustFontFallback: true,
 });
 
+const canonicalBaseUrl =
+  process.env.NEXT_PUBLIC_SITE_URL && !/localhost|127\.0\.0\.1/i.test(process.env.NEXT_PUBLIC_SITE_URL)
+    ? process.env.NEXT_PUBLIC_SITE_URL
+    : "https://afrinchishti.site";
+
 export const metadata: Metadata = {
-  metadataBase: new URL(site.url),
+  metadataBase: new URL(canonicalBaseUrl),
   title: { default: site.titleSuffix, template: `%s · ${site.name}` },
   description: site.description,
   applicationName: site.name,
@@ -30,8 +36,14 @@ export const metadata: Metadata = {
     title: site.titleSuffix,
     description: site.description,
     url: "/",
+    images: [{ url: "/opengraph-image" }],
   },
-  twitter: { card: "summary_large_image", title: site.titleSuffix, description: site.description },
+  twitter: {
+    card: "summary_large_image",
+    title: site.titleSuffix,
+    description: site.description,
+    images: ["/opengraph-image"],
+  },
   alternates: { canonical: "/" },
 };
 
@@ -48,17 +60,42 @@ const revealScript = `(function(){try{var d=document.documentElement;if(window.m
 
 export default async function RootLayout({ children }: { children: React.ReactNode }) {
   const profile = await getDbProfile();
+  const configuredSiteUrl = profile.siteMeta?.url;
+  const resolvedBaseUrl =
+    configuredSiteUrl && !/localhost|127\.0\.0\.1/i.test(configuredSiteUrl)
+      ? configuredSiteUrl.replace(/\/+$/, "")
+      : canonicalBaseUrl;
 
   const personJsonLd = {
     "@context": "https://schema.org",
     "@type": "Person",
     name: profile.name,
     jobTitle: profile.jobTitle,
+    description: profile.siteMeta?.description || site.description,
+    image: profile.portrait?.src
+      ? `${resolvedBaseUrl}${profile.portrait.src}`
+      : `${resolvedBaseUrl}/opengraph-image`,
     worksFor: { "@type": "Organization", name: profile.employer },
     address: { "@type": "PostalAddress", addressLocality: profile.location.city, addressCountry: profile.location.country },
     email: `mailto:${profile.email}`,
     sameAs: [profile.linkedin.url],
-    url: profile.siteMeta?.url || site.url,
+    url: resolvedBaseUrl,
+    knowsAbout: [
+      "Salesforce Administration",
+      "Sales Cloud",
+      "Service Cloud",
+      "Salesforce Flow",
+      "CRM Data Quality",
+      "HubSpot Integration",
+      "SOQL",
+      "Data Loader",
+      "Agentforce",
+    ],
+    hasCredential: {
+      "@type": "EducationalOccupationalCredential",
+      credentialCategory: "certification",
+      name: "Salesforce Certified Administrator",
+    },
   };
 
   const headerProfile = {
@@ -103,7 +140,7 @@ export default async function RootLayout({ children }: { children: React.ReactNo
         <SiteEffects />
         <script
           type="application/ld+json"
-          dangerouslySetInnerHTML={{ __html: JSON.stringify(personJsonLd).replace(/</g, "\\u003c") }}
+          dangerouslySetInnerHTML={{ __html: serializeJsonLd(personJsonLd) }}
         />
       </body>
     </html>

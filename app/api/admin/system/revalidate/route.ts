@@ -10,6 +10,7 @@ export async function POST(request: Request) {
 
   invalidateRepositoryCache();
   revalidatePath("/", "layout");
+  revalidatePath("/sitemap.xml");
 
   logSecurityEvent("CACHE_INVALIDATED", {
     req: request,

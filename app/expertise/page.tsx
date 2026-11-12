@@ -4,14 +4,44 @@ import { ArrowRight, Check, expertiseIcons } from "@/components/Icons";
 import { PageHeader } from "@/components/Section";
 import { pageMetadata } from "@/lib/metadata";
 import { contentTypeLabels } from "@/lib/project-utils";
-import { getDbExpertise, getDbExperience, getPublishedDbProjects, type ResolvedDbProject } from "@/lib/db/repository";
+import { getDbExpertise, getDbExperience, getDbProfile, getPublishedDbProjects, type ResolvedDbProject } from "@/lib/db/repository";
+import {
+  buildBreadcrumbSchema,
+  buildFaqSchema,
+  getCanonicalSiteUrl,
+  serializeJsonLd,
+  type FaqItem,
+} from "@/lib/seo/schema";
 
 export const metadata = pageMetadata({
   title: "Salesforce and CRM expertise",
   description:
-    "How Afrin Akter Chishti approaches Salesforce automation, CRM data quality, integrations with HubSpot, Gong and 6sense, access management, reporting, releases, user adoption and AI-assisted workflows.",
+    "Salesforce Flow automation, CRM data quality, HubSpot, Gong & 6sense integrations, access control, reporting, and user adoption by Afrin Akter Chishti.",
   path: "/expertise",
 });
+
+const expertiseFaqs: FaqItem[] = [
+  {
+    question: "What Salesforce clouds and tools does Afrin Akter Chishti administer?",
+    answer:
+      "Afrin administers Sales Cloud and Service Cloud, building record-triggered Flows, validation rules, permission sets, and dashboards. She also manages connected go-to-market integrations including HubSpot, Gong, 6sense, Tableau, and Data Loader.",
+  },
+  {
+    question: "How does Afrin approach Salesforce and HubSpot CRM data quality?",
+    answer:
+      "She combines preventive validation rules, duplicate-matching governance, scheduled cleanup playbooks, and clear field-ownership standards so marketing, sales, and support teams work from reliable records.",
+  },
+  {
+    question: "How are new Salesforce changes tested and rolled out to users?",
+    answer:
+      "Every change starts with stakeholder discovery, followed by sandbox configuration, edge-case testing, concise release notes, and task-focused user guides or walkthrough videos to drive adoption.",
+  },
+  {
+    question: "Is Afrin available for Salesforce Administrator or CRM Operations roles?",
+    answer:
+      "Yes. Based in Dhaka, Bangladesh, Afrin is open to discussions with recruiters, hiring managers, and product teams regarding Salesforce administration, CRM operations, and AI-assisted CRM workflows.",
+  },
+];
 
 function matchesArea(project: ResolvedDbProject, match: { categories?: string[]; tools?: string[] }) {
   if (match.categories?.includes(project.category)) return true;
@@ -20,11 +50,13 @@ function matchesArea(project: ResolvedDbProject, match: { categories?: string[];
 }
 
 export default async function ExpertisePage() {
-  const [expertise, exp, publishedProjects] = await Promise.all([
+  const [expertise, exp, publishedProjects, profile] = await Promise.all([
     getDbExpertise(),
     getDbExperience(),
     getPublishedDbProjects(),
+    getDbProfile(),
   ]);
+  const siteUrl = getCanonicalSiteUrl(profile.siteMeta?.url);
 
   const expertiseAreas = expertise.areas;
   const toolsInPractice = exp.toolsInPractice;
@@ -164,6 +196,39 @@ export default async function ExpertisePage() {
           </div>
         </div>
       </section>
+
+      <section aria-labelledby="expertise-faq-title" className="border-t border-line bg-tint py-20 sm:py-24">
+        <div className="container-page">
+          <div data-reveal>
+            <h2 id="expertise-faq-title" className="text-[clamp(1.75rem,3.2vw,2.5rem)] font-semibold tracking-[-0.03em]">
+              Frequently asked questions
+            </h2>
+            <p className="mt-3 max-w-2xl leading-relaxed text-body">
+              Direct answers about Salesforce clouds, integrations, release governance, and CRM operations.
+            </p>
+          </div>
+          <dl className="mt-10 grid gap-6 md:grid-cols-2" data-reveal="stagger">
+            {expertiseFaqs.map((faq) => (
+              <div key={faq.question} className="card p-6">
+                <dt className="text-base font-semibold tracking-tight text-ink">{faq.question}</dt>
+                <dd className="mt-2.5 text-[0.9375rem] leading-relaxed text-body">{faq.answer}</dd>
+              </div>
+            ))}
+          </dl>
+        </div>
+      </section>
+      <script
+        type="application/ld+json"
+        dangerouslySetInnerHTML={{
+          __html: serializeJsonLd([
+            buildBreadcrumbSchema(siteUrl, [
+              { name: "Home", path: "/" },
+              { name: "Expertise", path: "/expertise" },
+            ]),
+            buildFaqSchema(expertiseFaqs),
+          ]),
+        }}
+      />
     </>
   );
 }

@@ -59,6 +59,7 @@ export async function PUT(request: Request) {
       revalidatePath("/", "layout");
       revalidatePath("/about");
       revalidatePath("/contact");
+      revalidatePath("/sitemap.xml");
     } catch (e) {
       console.warn("Revalidation notice:", e);
     }

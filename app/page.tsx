@@ -9,6 +9,7 @@ import { SectionHeader } from "@/components/Section";
 import { YouTubeEmbed } from "@/components/YouTubeEmbed";
 import { extractHeadings, readDoc, docExists } from "@/lib/markdown";
 import { safeHref } from "@/lib/security/sanitize";
+import { buildWebSiteSchema, getCanonicalSiteUrl, serializeJsonLd } from "@/lib/seo/schema";
 import {
   getDbProfile,
   getDbExperience,
@@ -506,6 +507,17 @@ export default async function HomePage() {
           </div>
         </div>
       </section>
+      <script
+        type="application/ld+json"
+        dangerouslySetInnerHTML={{
+          __html: serializeJsonLd(
+            buildWebSiteSchema(getCanonicalSiteUrl(profile.siteMeta?.url), {
+              name: profile.name,
+              description: profile.siteMeta?.description,
+            })
+          ),
+        }}
+      />
     </>
   );
 }

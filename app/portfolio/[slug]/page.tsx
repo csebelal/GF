@@ -16,6 +16,12 @@ import type { LoadedDoc } from "@/lib/markdown";
 import { pageMetadata } from "@/lib/metadata";
 import { safeHref } from "@/lib/security/sanitize";
 import {
+  buildBreadcrumbSchema,
+  buildTechArticleSchema,
+  getCanonicalSiteUrl,
+  serializeJsonLd,
+} from "@/lib/seo/schema";
+import {
   getDbProjectBySlug,
   getDbProjectDocs,
   getPublishedDbProjects,
@@ -42,6 +48,7 @@ export async function generateMetadata({ params }: PageProps): Promise<Metadata>
     title: project.title,
     description: project.summary,
     path: `/portfolio/${project.slug}`,
+    image: project.coverImage?.src || `/portfolio/${project.slug}/opengraph-image`,
     type: "article",
   });
 }
@@ -410,6 +417,22 @@ export default async function ProjectPage({ params }: PageProps) {
           </div>
         </div>
       </section>
+      <script
+        type="application/ld+json"
+        dangerouslySetInnerHTML={{
+          __html: serializeJsonLd([
+            buildBreadcrumbSchema(getCanonicalSiteUrl(), [
+              { name: "Home", path: "/" },
+              { name: "Portfolio", path: "/portfolio" },
+              { name: project.title, path: `/portfolio/${project.slug}` },
+            ]),
+            buildTechArticleSchema(getCanonicalSiteUrl(), project, {
+              name: profile.name,
+              linkedinUrl: profile.linkedin.url,
+            }),
+          ]),
+        }}
+      />
     </article>
   );
 }

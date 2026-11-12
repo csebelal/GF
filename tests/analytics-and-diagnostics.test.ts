@@ -15,6 +15,14 @@ import {
   getRecentSecurityEvents,
   logSecurityEvent,
 } from "@/lib/security/audit";
+import sitemap, { dynamic as sitemapDynamic } from "@/app/sitemap";
+import {
+  buildBreadcrumbSchema,
+  buildFaqSchema,
+  buildTechArticleSchema,
+  buildWebSiteSchema,
+  getCanonicalSiteUrl,
+} from "@/lib/seo/schema";
 
 describe("analytics helpers", () => {
   it("normalizeTrackPath normalizes public paths and excludes admin/api routes", () => {
@@ -116,5 +124,66 @@ describe("computeContentSeoHealth", () => {
     assert.equal(health.invalidVideoCount, 1);
     assert.equal(health.indexedRoutesEstimate, 7);
     assert.equal(health.media.fileCount, 3);
+  });
+});
+
+describe("dynamic sitemap", () => {
+  it("exports force-dynamic and includes static and published project routes with lastModified", async () => {
+    assert.equal(sitemapDynamic, "force-dynamic");
+    const entries = await sitemap();
+    assert.ok(entries.length >= 6);
+    assert.ok(entries.some((entry) => entry.url.endsWith("/portfolio")));
+    assert.ok(entries.every((entry) => entry.lastModified instanceof Date));
+  });
+});
+
+describe("seo/geo/aeo schema builders", () => {
+  it("getCanonicalSiteUrl rejects localhost and resolves configured production URLs", () => {
+    assert.equal(getCanonicalSiteUrl("http://localhost:3000"), "https://afrinchishti.site");
+    assert.equal(getCanonicalSiteUrl("https://afrinchishti.site/"), "https://afrinchishti.site");
+  });
+
+  it("builds valid WebSite, BreadcrumbList, TechArticle, and FAQPage schemas", () => {
+    const webSite = buildWebSiteSchema("https://afrinchishti.site", { name: "Afrin Akter Chishti" });
+    assert.equal(webSite["@type"], "WebSite");
+    assert.equal(webSite.speakable["@type"], "SpeakableSpecification");
+
+    const breadcrumbs = buildBreadcrumbSchema("https://afrinchishti.site", [
+      { name: "Home", path: "/" },
+      { name: "Portfolio", path: "/portfolio" },
+    ]);
+    assert.equal(breadcrumbs["@type"], "BreadcrumbList");
+    assert.equal(breadcrumbs.itemListElement.length, 2);
+
+    const article = buildTechArticleSchema(
+      "https://afrinchishti.site",
+      {
+        title: "Lead Routing Flow",
+        slug: "lead-routing-flow",
+        summary: "Automated lead assignment",
+        category: "Automation",
+        tools: ["Flow", "Sales Cloud"],
+        videos: [
+          {
+            title: "Walkthrough",
+            youtubeUrl: "https://youtu.be/M7lc1UVf-VE",
+            parsed: {
+              ok: true,
+              id: "M7lc1UVf-VE",
+              isShort: false,
+              watchUrl: "https://www.youtube.com/watch?v=M7lc1UVf-VE",
+              embedUrl: "https://www.youtube-nocookie.com/embed/M7lc1UVf-VE",
+            },
+          },
+        ],
+      },
+      { name: "Afrin Akter Chishti" }
+    );
+    assert.equal(article["@type"], "TechArticle");
+    assert.equal(article.video?.[0]["@type"], "VideoObject");
+
+    const faq = buildFaqSchema([{ question: "Q1?", answer: "A1." }]);
+    assert.equal(faq["@type"], "FAQPage");
+    assert.equal(faq.mainEntity.length, 1);
   });
 });

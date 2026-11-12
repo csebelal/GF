@@ -12,6 +12,7 @@ interface PageMetadataInput {
 
 /** Page-specific title, description, canonical URL and social metadata. */
 export function pageMetadata({ title, description, path, image, type = "website" }: PageMetadataInput): Metadata {
+  const resolvedImage = image || "/opengraph-image";
   return {
     title,
     description,
@@ -22,13 +23,13 @@ export function pageMetadata({ title, description, path, image, type = "website"
       url: path,
       siteName: site.name,
       type,
-      ...(image ? { images: [{ url: image }] } : {}),
+      images: [{ url: resolvedImage }],
     },
     twitter: {
       card: "summary_large_image",
       title: `${title} · ${site.name}`,
       description,
-      ...(image ? { images: [image] } : {}),
+      images: [resolvedImage],
     },
   };
 }

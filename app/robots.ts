@@ -1,10 +1,12 @@
 import type { MetadataRoute } from "next";
-import { site as staticSite } from "@/content/site";
 import { getDbProfile } from "@/lib/db/repository";
+import { resolveSiteUrl } from "@/lib/site-url";
+
+export const dynamic = "force-dynamic";
 
 export default async function robots(): Promise<MetadataRoute.Robots> {
   const profile = await getDbProfile();
-  const siteUrl = (profile.siteMeta?.url || staticSite.url).replace(/\/$/, "");
+  const siteUrl = await resolveSiteUrl(profile.siteMeta?.url);
 
   return {
     rules: {

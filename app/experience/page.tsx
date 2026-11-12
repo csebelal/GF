@@ -6,11 +6,12 @@ import { PageHeader } from "@/components/Section";
 import { pageMetadata } from "@/lib/metadata";
 import { formatMonth } from "@/lib/project-utils";
 import { getDbExperience } from "@/lib/db/repository";
+import { buildBreadcrumbSchema, getCanonicalSiteUrl, serializeJsonLd } from "@/lib/seo/schema";
 
 export const metadata = pageMetadata({
   title: "Experience and credentials",
   description:
-    "Career history of Afrin Akter Chishti: Salesforce Administrator and Junior Salesforce Administrator at Field Nation, with earlier roles in customer service, quality assurance and training. Certifications, courses, education and languages.",
+    "Career history of Afrin Akter Chishti: Salesforce Administrator at Field Nation, prior QA & training roles, certifications, education, and languages.",
   path: "/experience",
 });
 
@@ -215,6 +216,17 @@ export default async function ExperiencePage() {
           </div>
         </div>
       </section>
+      <script
+        type="application/ld+json"
+        dangerouslySetInnerHTML={{
+          __html: serializeJsonLd(
+            buildBreadcrumbSchema(getCanonicalSiteUrl(), [
+              { name: "Home", path: "/" },
+              { name: "Experience", path: "/experience" },
+            ])
+          ),
+        }}
+      />
     </>
   );
 }

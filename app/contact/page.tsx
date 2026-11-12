@@ -5,11 +5,12 @@ import { ArrowRight, ArrowUpRight, Check, FileText, LinkedIn, Mail, MapPin } fro
 import { pageMetadata } from "@/lib/metadata";
 import { getDbProfile } from "@/lib/db/repository";
 import { safeHref } from "@/lib/security/sanitize";
+import { buildBreadcrumbSchema, getCanonicalSiteUrl, serializeJsonLd } from "@/lib/seo/schema";
 
 export const metadata = pageMetadata({
   title: "Contact",
   description:
-    "Contact Afrin Akter Chishti, Salesforce Administrator in Dhaka, Bangladesh, by email or LinkedIn, or download her CV.",
+    "Contact Afrin Akter Chishti, Salesforce Administrator in Dhaka, Bangladesh, via email or LinkedIn for CRM operations roles, or download her CV.",
   path: "/contact",
 });
 
@@ -194,6 +195,17 @@ export default async function ContactPage() {
           </div>
         </section>
       )}
+      <script
+        type="application/ld+json"
+        dangerouslySetInnerHTML={{
+          __html: serializeJsonLd(
+            buildBreadcrumbSchema(getCanonicalSiteUrl(profile.siteMeta?.url), [
+              { name: "Home", path: "/" },
+              { name: "Contact", path: "/contact" },
+            ])
+          ),
+        }}
+      />
     </>
   );
 }

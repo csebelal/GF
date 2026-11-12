@@ -96,6 +96,7 @@ export async function POST(request: Request) {
       revalidatePath("/", "layout");
       revalidatePath("/portfolio");
       revalidatePath(`/portfolio/${newProject.slug}`);
+      revalidatePath("/sitemap.xml");
     } catch (e) {
       console.warn("Revalidation notice:", e);
     }

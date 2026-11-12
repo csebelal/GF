@@ -3,7 +3,13 @@ import { ArrowRight } from "@/components/Icons";
 import { PortfolioFilters } from "@/components/PortfolioFilters";
 import { PageHeader } from "@/components/Section";
 import { pageMetadata } from "@/lib/metadata";
-import { getPublishedDbProjects, toDbCardData } from "@/lib/db/repository";
+import { getPublishedDbProjects, getDbProfile, toDbCardData } from "@/lib/db/repository";
+import {
+  buildBreadcrumbSchema,
+  buildCollectionPageSchema,
+  getCanonicalSiteUrl,
+  serializeJsonLd,
+} from "@/lib/seo/schema";
 
 export const metadata = pageMetadata({
   title: "Portfolio",
@@ -13,9 +19,10 @@ export const metadata = pageMetadata({
 });
 
 export default async function PortfolioPage() {
-  const published = await getPublishedDbProjects();
+  const [published, profile] = await Promise.all([getPublishedDbProjects(), getDbProfile()]);
   const projects = published.map(toDbCardData);
   const categories = Array.from(new Set(published.map((p) => p.category))).sort();
+  const siteUrl = getCanonicalSiteUrl(profile.siteMeta?.url);
 
   return (
     <>
@@ -44,6 +51,18 @@ export default async function PortfolioPage() {
           </Link>
         </div>
       </section>
+      <script
+        type="application/ld+json"
+        dangerouslySetInnerHTML={{
+          __html: serializeJsonLd([
+            buildBreadcrumbSchema(siteUrl, [
+              { name: "Home", path: "/" },
+              { name: "Portfolio", path: "/portfolio" },
+            ]),
+            buildCollectionPageSchema(siteUrl, published),
+          ]),
+        }}
+      />
     </>
   );
 }

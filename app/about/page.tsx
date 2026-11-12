@@ -6,11 +6,12 @@ import { ArrowRight, Award, Globe, MapPin, TrendingUp } from "@/components/Icons
 import { pageMetadata } from "@/lib/metadata";
 import { formatMonth } from "@/lib/project-utils";
 import { getDbProfile, getDbExperience } from "@/lib/db/repository";
+import { buildBreadcrumbSchema, getCanonicalSiteUrl, serializeJsonLd } from "@/lib/seo/schema";
 
 export const metadata = pageMetadata({
   title: "About",
   description:
-    "Afrin Akter Chishti moved from customer service, quality assurance and training into Salesforce administration at Field Nation. Her story, how she works with people, and what she is learning next.",
+    "How Afrin Akter Chishti transitioned from customer service, QA, and training into Salesforce administration at Field Nation—and how she works with teams.",
   path: "/about",
   type: "profile",
 });
@@ -272,6 +273,17 @@ export default async function AboutPage() {
           </div>
         </div>
       </section>
+      <script
+        type="application/ld+json"
+        dangerouslySetInnerHTML={{
+          __html: serializeJsonLd(
+            buildBreadcrumbSchema(getCanonicalSiteUrl(), [
+              { name: "Home", path: "/" },
+              { name: "About", path: "/about" },
+            ])
+          ),
+        }}
+      />
     </>
   );
 }

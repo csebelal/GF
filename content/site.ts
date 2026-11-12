@@ -36,7 +36,7 @@ export const site = {
   /** Used in <title> templates and social cards. */
   titleSuffix: "Afrin Akter Chishti — Salesforce Administrator",
   description:
-    "Afrin Akter Chishti is a Salesforce Administrator at Field Nation in Dhaka, Bangladesh, working on Sales Cloud and Service Cloud automation, CRM data quality, access management, reporting and connected go-to-market tools.",
+    "Salesforce Administrator at Field Nation (Dhaka). Sales Cloud & Service Cloud automation, Flow, CRM data quality, HubSpot sync, and analytics.",
   /** Set NEXT_PUBLIC_SITE_URL in production so canonical URLs and the sitemap are correct. */
   url: (process.env.NEXT_PUBLIC_SITE_URL ?? "http://localhost:3000").replace(/\/$/, ""),
   locale: "en_US",

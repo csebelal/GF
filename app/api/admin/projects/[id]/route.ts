@@ -130,6 +130,7 @@ export async function PUT(request: Request, { params }: RouteProps) {
       revalidatePath("/", "layout");
       revalidatePath("/portfolio");
       revalidatePath(`/portfolio/${updated.slug}`);
+      revalidatePath("/sitemap.xml");
     } catch (e) {
       console.warn("Revalidation notice:", e);
     }
@@ -176,6 +177,7 @@ export async function DELETE(request: Request, { params }: RouteProps) {
     try {
       revalidatePath("/", "layout");
       revalidatePath("/portfolio");
+      revalidatePath("/sitemap.xml");
     } catch (e) {
       console.warn("Revalidation notice:", e);
     }
