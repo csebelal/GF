@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import {
   getAuthenticatedAdmin,
+  getAuthenticatedAdminLean,
   createSessionToken,
   SESSION_COOKIE_NAME,
 } from "@/lib/auth/session";
@@ -9,19 +10,22 @@ import { AdminModel } from "@/lib/db/models/Admin";
 import { logSecurityEvent } from "@/lib/security/audit";
 
 export async function GET() {
-  const admin = await getAuthenticatedAdmin();
+  const admin = await getAuthenticatedAdminLean();
   if (!admin) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
 
-  return NextResponse.json({
-    admin: {
-      email: admin.email,
-      name: admin.name,
-      role: admin.role,
-      lastLogin: admin.lastLogin,
+  return NextResponse.json(
+    {
+      admin: {
+        email: admin.email,
+        name: admin.name,
+        role: admin.role,
+        lastLogin: admin.lastLogin,
+      },
     },
-  });
+    { headers: { "Cache-Control": "private, no-store" } }
+  );
 }
 
 export async function PUT(request: Request) {

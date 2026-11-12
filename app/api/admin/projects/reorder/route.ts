@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 import { revalidatePath } from "next/cache";
-import { getAuthenticatedAdmin } from "@/lib/auth/session";
+import { getAuthenticatedAdminLean } from "@/lib/auth/session";
 import { reorderDbProjects } from "@/lib/db/repository";
 import { logSecurityEvent } from "@/lib/security/audit";
 
@@ -8,7 +8,7 @@ const SLUG_PATTERN = /^[a-z0-9]+(?:-[a-z0-9]+)*$/;
 
 export async function POST(request: Request) {
   try {
-    const admin = await getAuthenticatedAdmin();
+    const admin = await getAuthenticatedAdminLean();
     if (!admin) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }

@@ -1,6 +1,18 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import { Close, Plus } from "@/components/Icons";
+import {
+  AdminAlert,
+  AdminCard,
+  AdminField,
+  adminDangerIconBtnClass,
+  adminFocusRing,
+  adminInputClass,
+  adminInputCompactClass,
+  adminPrimaryBtnClass,
+  adminTextareaClass,
+} from "@/components/admin/ui/FormPrimitives";
 
 export default function AdminExpertisePage() {
   const [data, setData] = useState<any>(null);
@@ -56,207 +68,228 @@ export default function AdminExpertisePage() {
     setData({ ...data, areas });
   };
 
-  if (loading) return <div className="p-8 text-center text-sm text-[#646b73]">Loading expertise data...</div>;
-  if (!data) return <div className="p-8 text-center text-sm text-red-600">Expertise data unavailable.</div>;
+  if (loading) {
+    return (
+      <AdminCard className="mx-auto max-w-4xl p-12 text-center text-sm text-body">
+        Loading expertise data...
+      </AdminCard>
+    );
+  }
+  if (!data) {
+    return (
+      <AdminCard className="mx-auto max-w-4xl p-12 text-center text-sm text-danger">
+        Expertise data unavailable.
+      </AdminCard>
+    );
+  }
 
   return (
     <form onSubmit={handleSubmit} className="mx-auto max-w-4xl space-y-8 pb-16">
-      <div className="flex items-center justify-between">
+      <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
         <div>
-          <h2 className="text-xl font-bold text-[#191c20]">Expertise Domains & Working Approach</h2>
-          <p className="text-xs text-[#646b73]">
-            Manage functional Salesforce domains, business problems, practices, tools, and the 5-step approach
+          <h2 className="text-xl font-bold tracking-tight text-ink">
+            Expertise Domains & Working Approach
+          </h2>
+          <p className="mt-0.5 text-sm text-body">
+            Manage functional Salesforce domains, business problems, practices, tools, and the 5-step approach.
           </p>
         </div>
-        <button
-          type="submit"
-          disabled={saving}
-          className="rounded-lg bg-[#0e5f5b] px-5 py-2.5 text-sm font-semibold text-white shadow-sm transition hover:bg-[#0a4744] disabled:opacity-50"
-        >
+        <button type="submit" disabled={saving} className={adminPrimaryBtnClass}>
           {saving ? "Saving Changes..." : "Save Expertise"}
         </button>
       </div>
 
-      {message && (
-        <div
-          className={`rounded-lg p-3 text-sm ${
-            message.type === "success"
-              ? "border border-green-200 bg-green-50 text-green-800"
-              : "border border-red-200 bg-red-50 text-red-800"
-          }`}
-        >
-          {message.text}
-        </div>
-      )}
+      <AdminAlert message={message} />
 
       {/* Expertise Domains */}
-      <div className="rounded-xl border border-[#e6e1d8] bg-white p-6 shadow-sm space-y-6">
-        <h3 className="text-sm font-bold uppercase tracking-wider text-[#0e5f5b]">
+      <AdminCard className="space-y-6">
+        <h3 className="text-sm font-bold uppercase tracking-[0.08em] text-accent">
           1. Core Expertise Domains ({data.areas?.length || 0})
         </h3>
 
         {(data.areas || []).map((area: any, areaIdx: number) => (
-          <div key={area.id || areaIdx} className="rounded-xl border border-[#e6e1d8] bg-[#faf8f4] p-5 space-y-4">
-            <div className="grid gap-3 sm:grid-cols-3">
-              <div className="sm:col-span-2">
-                <label className="block text-[11px] font-semibold text-[#4c535b]">Domain Title</label>
-                <input
-                  type="text"
-                  required
-                  value={area.title || ""}
+          <div
+            key={area.id || areaIdx}
+            className="space-y-4 rounded-xl border border-line bg-canvas p-5"
+          >
+            <div className="grid gap-4 sm:grid-cols-3">
+              <AdminField label="Domain Title" className="sm:col-span-2">
+                {({ id }) => (
+                  <input
+                    id={id}
+                    type="text"
+                    required
+                    value={area.title || ""}
+                    onChange={(e) => {
+                      const areas = [...data.areas];
+                      areas[areaIdx].title = e.target.value;
+                      setData({ ...data, areas });
+                    }}
+                    className={`${adminInputClass} font-semibold`}
+                  />
+                )}
+              </AdminField>
+
+              <AdminField label="Short Title (Pill)">
+                {({ id }) => (
+                  <input
+                    id={id}
+                    type="text"
+                    required
+                    value={area.shortTitle || ""}
+                    onChange={(e) => {
+                      const areas = [...data.areas];
+                      areas[areaIdx].shortTitle = e.target.value;
+                      setData({ ...data, areas });
+                    }}
+                    className={adminInputClass}
+                  />
+                )}
+              </AdminField>
+            </div>
+
+            <AdminField label="Business Problem It Solves">
+              {({ id }) => (
+                <textarea
+                  id={id}
+                  rows={2}
+                  value={area.problem || ""}
                   onChange={(e) => {
                     const areas = [...data.areas];
-                    areas[areaIdx].title = e.target.value;
+                    areas[areaIdx].problem = e.target.value;
                     setData({ ...data, areas });
                   }}
-                  className="mt-1 w-full rounded border border-[#d4cdc0] px-3 py-1.5 text-sm font-semibold text-[#191c20]"
+                  className={`${adminTextareaClass} text-xs`}
                 />
-              </div>
+              )}
+            </AdminField>
 
-              <div>
-                <label className="block text-[11px] font-semibold text-[#4c535b]">Short Title (Pill)</label>
+            <AdminField label="Tools (comma-separated)">
+              {({ id }) => (
                 <input
+                  id={id}
                   type="text"
-                  required
-                  value={area.shortTitle || ""}
+                  value={(area.tools || []).join(", ")}
                   onChange={(e) => {
                     const areas = [...data.areas];
-                    areas[areaIdx].shortTitle = e.target.value;
+                    areas[areaIdx].tools = e.target.value
+                      .split(",")
+                      .map((t) => t.trim())
+                      .filter(Boolean);
                     setData({ ...data, areas });
                   }}
-                  className="mt-1 w-full rounded border border-[#d4cdc0] px-3 py-1.5 text-xs text-[#191c20]"
+                  className={adminInputCompactClass}
                 />
-              </div>
-            </div>
+              )}
+            </AdminField>
 
-            <div>
-              <label className="block text-[11px] font-semibold text-[#4c535b]">Business Problem It Solves</label>
-              <textarea
-                rows={2}
-                value={area.problem || ""}
-                onChange={(e) => {
-                  const areas = [...data.areas];
-                  areas[areaIdx].problem = e.target.value;
-                  setData({ ...data, areas });
-                }}
-                className="mt-1 w-full rounded border border-[#d4cdc0] px-3 py-1.5 text-xs text-[#191c20]"
-              />
-            </div>
-
-            <div>
-              <label className="block text-[11px] font-semibold text-[#4c535b]">Tools (comma-separated)</label>
-              <input
-                type="text"
-                value={(area.tools || []).join(", ")}
-                onChange={(e) => {
-                  const areas = [...data.areas];
-                  areas[areaIdx].tools = e.target.value.split(",").map((t) => t.trim()).filter(Boolean);
-                  setData({ ...data, areas });
-                }}
-                className="mt-1 w-full rounded border border-[#d4cdc0] px-3 py-1.5 text-xs text-[#191c20]"
-              />
-            </div>
-
-            <div className="space-y-2 pt-2 border-t border-[#e6e1d8]">
+            <div className="space-y-2.5 border-t border-line pt-3">
               <div className="flex items-center justify-between">
-                <span className="text-[11px] font-semibold text-[#4c535b]">Practices (Bullet points)</span>
+                <span className="text-xs font-semibold text-body">Practices (Bullet points)</span>
                 <button
                   type="button"
                   onClick={() => addPractice(areaIdx)}
-                  className="text-[11px] font-semibold text-[#0e5f5b] hover:underline"
+                  className={`inline-flex cursor-pointer items-center gap-1 rounded-lg px-2 py-1 text-xs font-semibold text-accent-strong hover:bg-accent-soft ${adminFocusRing}`}
                 >
-                  + Add Practice
+                  <Plus className="size-3.5" />
+                  <span>Add Practice</span>
                 </button>
               </div>
 
               {(area.practices || []).map((practice: string, pIdx: number) => (
-                <div key={pIdx} className="flex gap-2 items-center">
+                <div key={pIdx} className="flex items-center gap-2">
                   <input
                     type="text"
+                    aria-label={`${area.title || `Domain ${areaIdx + 1}`} practice ${pIdx + 1}`}
                     value={practice}
                     onChange={(e) => {
                       const areas = [...data.areas];
                       areas[areaIdx].practices[pIdx] = e.target.value;
                       setData({ ...data, areas });
                     }}
-                    className="flex-1 rounded border border-[#d4cdc0] px-2.5 py-1 text-xs text-[#191c20]"
+                    className={adminInputCompactClass}
                   />
                   <button
                     type="button"
                     onClick={() => removePractice(areaIdx, pIdx)}
-                    className="text-xs text-red-500"
+                    aria-label={`Remove practice ${pIdx + 1}`}
+                    className={adminDangerIconBtnClass}
                   >
-                    ✕
+                    <Close className="size-4" />
                   </button>
                 </div>
               ))}
             </div>
           </div>
         ))}
-      </div>
+      </AdminCard>
 
       {/* Working Approach Steps */}
-      <div className="rounded-xl border border-[#e6e1d8] bg-white p-6 shadow-sm space-y-4">
-        <h3 className="text-sm font-bold uppercase tracking-wider text-[#0e5f5b]">
+      <AdminCard className="space-y-4">
+        <h3 className="text-sm font-bold uppercase tracking-[0.08em] text-accent">
           2. Working Approach Steps (Home Page Section)
         </h3>
 
         {(data.workingApproach || []).map((step: any, idx: number) => (
-          <div key={idx} className="rounded-lg border border-[#e6e1d8] bg-[#faf8f4] p-4 space-y-2">
+          <div key={idx} className="space-y-3 rounded-xl border border-line bg-canvas p-4">
             <div className="flex items-center justify-between">
-              <span className="text-xs font-bold text-[#0e5f5b]">Step {idx + 1}</span>
+              <span className="text-xs font-bold text-accent-strong">Step {idx + 1}</span>
             </div>
             <div className="grid gap-3 sm:grid-cols-2">
-              <div>
-                <label className="block text-[11px] font-semibold text-[#4c535b]">Step Title</label>
-                <input
-                  type="text"
-                  value={step.title || ""}
-                  onChange={(e) => {
-                    const steps = [...data.workingApproach];
-                    steps[idx].title = e.target.value;
-                    setData({ ...data, workingApproach: steps });
-                  }}
-                  className="mt-1 w-full rounded border border-[#d4cdc0] px-2.5 py-1 text-xs font-medium"
-                />
-              </div>
-              <div>
-                <label className="block text-[11px] font-semibold text-[#4c535b]">Key Artifact / Detail</label>
-                <input
-                  type="text"
-                  value={step.detail || ""}
-                  onChange={(e) => {
-                    const steps = [...data.workingApproach];
-                    steps[idx].detail = e.target.value;
-                    setData({ ...data, workingApproach: steps });
-                  }}
-                  className="mt-1 w-full rounded border border-[#d4cdc0] px-2.5 py-1 text-xs text-[#646b73]"
-                />
-              </div>
-              <div className="sm:col-span-2">
-                <label className="block text-[11px] font-semibold text-[#4c535b]">Description</label>
-                <textarea
-                  rows={2}
-                  value={step.body || ""}
-                  onChange={(e) => {
-                    const steps = [...data.workingApproach];
-                    steps[idx].body = e.target.value;
-                    setData({ ...data, workingApproach: steps });
-                  }}
-                  className="mt-1 w-full rounded border border-[#d4cdc0] px-2.5 py-1 text-xs"
-                />
-              </div>
+              <AdminField label="Step Title">
+                {({ id }) => (
+                  <input
+                    id={id}
+                    type="text"
+                    value={step.title || ""}
+                    onChange={(e) => {
+                      const steps = [...data.workingApproach];
+                      steps[idx].title = e.target.value;
+                      setData({ ...data, workingApproach: steps });
+                    }}
+                    className={`${adminInputCompactClass} font-medium`}
+                  />
+                )}
+              </AdminField>
+
+              <AdminField label="Key Artifact / Detail">
+                {({ id }) => (
+                  <input
+                    id={id}
+                    type="text"
+                    value={step.detail || ""}
+                    onChange={(e) => {
+                      const steps = [...data.workingApproach];
+                      steps[idx].detail = e.target.value;
+                      setData({ ...data, workingApproach: steps });
+                    }}
+                    className={`${adminInputCompactClass} text-body`}
+                  />
+                )}
+              </AdminField>
+
+              <AdminField label="Description" className="sm:col-span-2">
+                {({ id }) => (
+                  <textarea
+                    id={id}
+                    rows={2}
+                    value={step.body || ""}
+                    onChange={(e) => {
+                      const steps = [...data.workingApproach];
+                      steps[idx].body = e.target.value;
+                      setData({ ...data, workingApproach: steps });
+                    }}
+                    className={`${adminTextareaClass} text-xs`}
+                  />
+                )}
+              </AdminField>
             </div>
           </div>
         ))}
-      </div>
+      </AdminCard>
 
       <div className="flex justify-end">
-        <button
-          type="submit"
-          disabled={saving}
-          className="rounded-lg bg-[#0e5f5b] px-6 py-3 text-sm font-semibold text-white shadow-sm transition hover:bg-[#0a4744] disabled:opacity-50"
-        >
+        <button type="submit" disabled={saving} className={adminPrimaryBtnClass}>
           {saving ? "Saving Changes..." : "Save Expertise"}
         </button>
       </div>

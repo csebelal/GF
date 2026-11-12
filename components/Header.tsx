@@ -1,11 +1,21 @@
 "use client";
 
+import Image from "next/image";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useCallback, useEffect, useRef, useState } from "react";
-import { primaryNav, profile as staticProfile } from "@/content/site";
+import { shouldUnoptimizeImage } from "@/lib/image-utils";
+import { safeHref } from "@/lib/security/sanitize";
 import { CVDownload } from "./CVDownload";
 import { Close, Menu } from "./Icons";
+
+const DEFAULT_NAV = [
+  { href: "/", label: "Home" },
+  { href: "/portfolio", label: "Portfolio" },
+  { href: "/expertise", label: "Expertise" },
+  { href: "/about", label: "About" },
+  { href: "/contact", label: "Contact" },
+];
 
 function isActive(pathname: string, href: string) {
   if (href === "/") return pathname === "/";
@@ -22,9 +32,9 @@ export function Header({ profile: customProfile }: HeaderProps = {}) {
     return null;
   }
 
-  const profile = customProfile ?? staticProfile;
+  const profile = customProfile ?? {};
   const headerSettings = profile?.headerSettings;
-  const navItems = headerSettings?.navItems?.length ? headerSettings.navItems : primaryNav;
+  const navItems = headerSettings?.navItems?.length ? headerSettings.navItems : DEFAULT_NAV;
   const highlight = headerSettings?.highlightLink;
   const brandName = headerSettings?.brandTitle || profile.name;
   const brandRole = headerSettings?.brandSubtitle !== undefined && headerSettings.brandSubtitle !== "" ? headerSettings.brandSubtitle : profile.jobTitle;
@@ -44,6 +54,10 @@ export function Header({ profile: customProfile }: HeaderProps = {}) {
   const [scrolled, setScrolled] = useState(false);
   const buttonRef = useRef<HTMLButtonElement>(null);
   const panelRef = useRef<HTMLDivElement>(null);
+  const progressBarRef = useRef<HTMLDivElement>(null);
+  const scrolledRef = useRef(false);
+
+  const isCaseStudy = /^\/portfolio\/[^/]+/.test(pathname || "");
 
   const close = useCallback((returnFocus = true) => {
     setOpen(false);
@@ -56,11 +70,37 @@ export function Header({ profile: customProfile }: HeaderProps = {}) {
   }, [pathname]);
 
   useEffect(() => {
-    const onScroll = () => setScrolled(window.scrollY > 8);
-    onScroll();
+    let frame = 0;
+
+    const updateOnScroll = () => {
+      frame = 0;
+      const y = window.scrollY;
+      const nextScrolled = y > 8;
+      if (scrolledRef.current !== nextScrolled) {
+        scrolledRef.current = nextScrolled;
+        setScrolled(nextScrolled);
+      }
+
+      if (!isCaseStudy && progressBarRef.current) {
+        const maxScroll = document.documentElement.scrollHeight - window.innerHeight;
+        const progress = maxScroll > 0 ? Math.min(Math.max(y / maxScroll, 0), 1) : 0;
+        progressBarRef.current.style.transform = `scaleX(${progress})`;
+      }
+    };
+
+    const onScroll = () => {
+      if (!frame) frame = requestAnimationFrame(updateOnScroll);
+    };
+
+    updateOnScroll();
     window.addEventListener("scroll", onScroll, { passive: true });
-    return () => window.removeEventListener("scroll", onScroll);
-  }, []);
+    window.addEventListener("resize", onScroll, { passive: true });
+    return () => {
+      cancelAnimationFrame(frame);
+      window.removeEventListener("scroll", onScroll);
+      window.removeEventListener("resize", onScroll);
+    };
+  }, [isCaseStudy]);
 
   // Keyboard support while the mobile menu is open: Escape closes, Tab stays inside.
   useEffect(() => {
@@ -102,18 +142,21 @@ export function Header({ profile: customProfile }: HeaderProps = {}) {
   return (
     <header className="sticky top-0 z-50 px-3 pt-3 sm:px-5">
       <div
-        className={`mx-auto max-w-[78rem] rounded-2xl border bg-white/85 backdrop-blur-md transition-[box-shadow,border-color] duration-300 supports-[backdrop-filter]:bg-white/75 ${
+        className={`relative mx-auto max-w-[78rem] transform-gpu rounded-2xl border bg-white/95 transition-[box-shadow,border-color] duration-200 supports-[backdrop-filter]:bg-white/92 backdrop-blur-[4px] ${
           scrolled || open ? "border-line shadow-float" : "border-line/70 shadow-none"
         }`}
       >
         <div className="flex h-16 items-center justify-between gap-4 pl-3 pr-2 sm:pl-4">
           <Link href="/" className="group flex min-h-11 items-center gap-3 rounded-lg pr-2" aria-label={`${brandName}, home`}>
             {showAvatar && (
-              <img
-                src={profile.portrait?.avatar || profile.portrait?.src}
+              <Image
+                src={profile.portrait?.avatar || profile.portrait?.src || ""}
                 alt=""
                 width={36}
                 height={36}
+                loading="eager"
+                decoding="async"
+                unoptimized={shouldUnoptimizeImage(profile.portrait?.avatar || profile.portrait?.src)}
                 className="size-9 rounded-full object-cover ring-1 ring-line"
               />
             )}
@@ -130,14 +173,19 @@ export function Header({ profile: customProfile }: HeaderProps = {}) {
                 return (
                   <li key={item.href}>
                     <Link
-                      href={item.href}
+                      href={safeHref(item.href, "/")}
                       aria-current={active ? "page" : undefined}
-                      className={`relative inline-flex min-h-10 items-center rounded-lg px-3.5 text-[0.9375rem] font-medium transition-colors ${
+                      className={`relative inline-flex min-h-10 items-center rounded-lg px-3.5 text-[0.9375rem] font-medium transition-colors duration-200 ${
                         active ? "bg-tint text-ink" : "text-body hover:bg-tint/70 hover:text-ink"
                       }`}
                     >
                       {item.label}
-                      {active ? <span aria-hidden className="absolute inset-x-3.5 -bottom-[3px] h-[2px] rounded-full bg-accent" /> : null}
+                      <span
+                        aria-hidden
+                        className={`absolute inset-x-3.5 -bottom-[3px] h-[2px] origin-center rounded-full bg-accent transition-transform duration-300 ease-out ${
+                          active ? "scale-x-100 opacity-100" : "scale-x-0 opacity-0"
+                        }`}
+                      />
                     </Link>
                   </li>
                 );
@@ -146,17 +194,26 @@ export function Header({ profile: customProfile }: HeaderProps = {}) {
           </nav>
 
           <div className="hidden items-center gap-2 lg:flex">
-            {highlight && highlight.show !== false && highlight.href ? (
-              <Link
-                href={highlight.href}
-                aria-current={isActive(pathname, highlight.href) ? "page" : undefined}
-                className={`inline-flex min-h-10 items-center rounded-lg px-3 text-[0.9375rem] font-medium transition-colors ${
-                  isActive(pathname, highlight.href) ? "text-accent" : "text-body hover:text-ink"
-                }`}
-              >
-                {highlight.label}
-              </Link>
-            ) : null}
+            {highlight && highlight.show !== false && highlight.href ? (() => {
+              const highlightActive = isActive(pathname, highlight.href);
+              return (
+                <Link
+                  href={safeHref(highlight.href, "/experience")}
+                  aria-current={highlightActive ? "page" : undefined}
+                  className={`relative inline-flex min-h-10 items-center rounded-lg px-3 text-[0.9375rem] font-medium transition-colors duration-200 ${
+                    highlightActive ? "bg-accent-soft/75 text-accent-strong" : "text-body hover:bg-tint/70 hover:text-ink"
+                  }`}
+                >
+                  {highlight.label}
+                  <span
+                    aria-hidden
+                    className={`absolute inset-x-3 -bottom-[3px] h-[2px] origin-center rounded-full bg-accent transition-transform duration-300 ease-out ${
+                      highlightActive ? "scale-x-100 opacity-100" : "scale-x-0 opacity-0"
+                    }`}
+                  />
+                </Link>
+              );
+            })() : null}
             {showCv && <CVDownload variant="primary" size="sm" cv={profile.cv} label={cvLabel} />}
           </div>
 
@@ -186,15 +243,20 @@ export function Header({ profile: customProfile }: HeaderProps = {}) {
                 return (
                   <li key={item.href}>
                     <Link
-                      href={item.href}
+                      href={safeHref(item.href, "/")}
                       aria-current={active ? "page" : undefined}
                       onClick={() => close(false)}
-                      className={`flex min-h-12 items-center justify-between rounded-xl px-3 text-base font-medium ${
+                      className={`flex min-h-12 items-center justify-between rounded-xl px-3 text-base font-medium transition-colors duration-200 ${
                         active ? "bg-tint text-ink" : "text-body hover:bg-tint/70 hover:text-ink"
                       }`}
                     >
                       {item.label}
-                      {active ? <span aria-hidden className="size-1.5 rounded-full bg-accent" /> : null}
+                      <span
+                        aria-hidden
+                        className={`size-1.5 rounded-full bg-accent transition-transform duration-200 ${
+                          active ? "scale-100 opacity-100" : "scale-0 opacity-0"
+                        }`}
+                      />
                     </Link>
                   </li>
                 );
@@ -208,6 +270,17 @@ export function Header({ profile: customProfile }: HeaderProps = {}) {
             </a>
           </div>
         </div>
+        {!isCaseStudy && (
+          <div aria-hidden className="pointer-events-none absolute inset-x-4 bottom-0 h-[2px] overflow-hidden rounded-full">
+            <div
+              ref={progressBarRef}
+              className={`h-full origin-left bg-accent/70 transition-[transform,opacity] duration-150 ease-out ${
+                scrolled ? "opacity-100" : "opacity-0"
+              }`}
+              style={{ transform: "scaleX(0)" }}
+            />
+          </div>
+        )}
       </div>
     </header>
   );

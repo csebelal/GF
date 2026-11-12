@@ -79,35 +79,86 @@ export function toDbCardData(project: ResolvedDbProject) {
   };
 }
 
-// In-memory cache for fast SSG/SSR builds
-let cacheTime = 0;
-const CACHE_TTL_MS = 1500;
-let cachedProjects: ResolvedDbProject[] | null = null;
-let cachedProfile: ISiteProfile | null = null;
-let cachedExperience: IExperienceData | null = null;
-let cachedExpertise: IExpertiseData | null = null;
-
-export function invalidateRepositoryCache() {
-  cacheTime = 0;
-  cachedProjects = null;
-  cachedProfile = null;
-  cachedExperience = null;
-  cachedExpertise = null;
+// Global per-entity cache + in-flight coalescing shared across Next.js route workers
+interface CacheSlot<T> {
+  value: T;
+  expiresAt: number;
 }
 
-function toPlain<T>(obj: T): T {
-  if (obj === null || obj === undefined) return obj;
-  return JSON.parse(
-    JSON.stringify(obj, (key, value) => {
-      if (key === "_id" && value && typeof value === "object") {
-        return value.toString();
-      }
-      if (key === "__v") {
-        return undefined;
-      }
-      return value;
-    })
-  );
+interface RepoCacheStore {
+  projectsCache: CacheSlot<ResolvedDbProject[]> | null;
+  profileCache: CacheSlot<ISiteProfile> | null;
+  experienceCache: CacheSlot<IExperienceData> | null;
+  expertiseCache: CacheSlot<IExpertiseData> | null;
+  inflightProjects: Promise<ResolvedDbProject[]> | null;
+  inflightProfile: Promise<ISiteProfile> | null;
+  inflightExperience: Promise<IExperienceData> | null;
+  inflightExpertise: Promise<IExpertiseData> | null;
+}
+
+declare global {
+  // eslint-disable-next-line no-var
+  var __afrinRepoCache: RepoCacheStore | undefined;
+}
+
+const CACHE_TTL_MS = 60_000;
+const FALLBACK_TTL_MS = 15_000;
+
+const repoStore: RepoCacheStore =
+  globalThis.__afrinRepoCache || {
+    projectsCache: null,
+    profileCache: null,
+    experienceCache: null,
+    expertiseCache: null,
+    inflightProjects: null,
+    inflightProfile: null,
+    inflightExperience: null,
+    inflightExpertise: null,
+  };
+
+if (!globalThis.__afrinRepoCache) {
+  globalThis.__afrinRepoCache = repoStore;
+}
+
+export function invalidateRepositoryCache() {
+  repoStore.projectsCache = null;
+  repoStore.profileCache = null;
+  repoStore.experienceCache = null;
+  repoStore.expertiseCache = null;
+  repoStore.inflightProjects = null;
+  repoStore.inflightProfile = null;
+  repoStore.inflightExperience = null;
+  repoStore.inflightExpertise = null;
+}
+
+function toPlain<T>(value: T): T {
+  if (value === null || value === undefined || typeof value !== "object") {
+    return value;
+  }
+  if (value instanceof Date) {
+    return value.toISOString() as unknown as T;
+  }
+  if (Array.isArray(value)) {
+    const len = value.length;
+    const arr = new Array(len);
+    for (let i = 0; i < len; i++) {
+      arr[i] = toPlain(value[i]);
+    }
+    return arr as unknown as T;
+  }
+  const obj = value as Record<string, unknown>;
+  if (obj._bsontype === "ObjectId" || typeof obj.toHexString === "function") {
+    return String(value) as unknown as T;
+  }
+  const out: Record<string, unknown> = {};
+  for (const key in obj) {
+    if (!Object.prototype.hasOwnProperty.call(obj, key)) continue;
+    if (key === "__v") continue;
+    const v = obj[key];
+    if (v === undefined) continue;
+    out[key] = key === "_id" && v && typeof v === "object" ? String(v) : toPlain(v);
+  }
+  return out as T;
 }
 
 function projectFromDb(rawDoc: any): ResolvedDbProject {
@@ -173,43 +224,58 @@ function projectFromDb(rawDoc: any): ResolvedDbProject {
 
 export async function getDbProjects(): Promise<ResolvedDbProject[]> {
   const now = Date.now();
-  if (cachedProjects && now - cacheTime < CACHE_TTL_MS) {
-    return cachedProjects;
+  if (repoStore.projectsCache && now < repoStore.projectsCache.expiresAt) {
+    return repoStore.projectsCache.value;
+  }
+  if (repoStore.inflightProjects) {
+    return repoStore.inflightProjects;
   }
 
-  try {
-    await connectDB();
-    const docs = await ProjectModel.find({}).sort({ sortOrder: 1, createdAt: -1 }).lean();
-    if (docs && docs.length > 0) {
-      cachedProjects = docs.map(projectFromDb);
-      cacheTime = now;
-      return cachedProjects;
+  const promise = (async () => {
+    let dbFailed = false;
+    try {
+      await connectDB();
+      const docs = await ProjectModel.find({}).sort({ sortOrder: 1, createdAt: -1 }).lean();
+      if (docs && docs.length > 0) {
+        const resolved = docs.map(projectFromDb);
+        repoStore.projectsCache = { value: resolved, expiresAt: Date.now() + CACHE_TTL_MS };
+        return resolved;
+      }
+    } catch (err) {
+      dbFailed = true;
+      console.warn("MongoDB fetch failed, falling back to static:", err);
     }
-  } catch (err) {
-    console.warn("MongoDB fetch failed, falling back to static:", err);
-  }
 
-  // Fallback to static projects if DB empty or unavailable
-  const { projectSources } = await import("@/content/projects");
-  cachedProjects = projectSources.map(({ project, isSample }) => {
-    const rawVideos = project.videos || [];
-    const videos: ResolvedDbVideo[] = rawVideos.map((v) => ({
-      ...v,
-      parsed: parseYouTubeUrl(v.youtubeUrl || ""),
-    }));
+    // Fallback to static projects if DB empty or unavailable
+    const { projectSources } = await import("@/content/projects");
+    const fallback = projectSources.map(({ project, isSample }) => {
+      const rawVideos = project.videos || [];
+      const videos: ResolvedDbVideo[] = rawVideos.map((v) => ({
+        ...v,
+        parsed: parseYouTubeUrl(v.youtubeUrl || ""),
+      }));
 
-    const contentType = getContentType(project);
+      const contentType = getContentType(project);
 
-    return {
-      ...project,
-      tools: project.tools || [],
-      contentType,
-      isSample,
-      videos,
+      return {
+        ...project,
+        tools: project.tools || [],
+        contentType,
+        isSample,
+        videos,
+      };
+    });
+    repoStore.projectsCache = {
+      value: fallback,
+      expiresAt: Date.now() + (dbFailed ? FALLBACK_TTL_MS : CACHE_TTL_MS),
     };
+    return fallback;
+  })().finally(() => {
+    repoStore.inflightProjects = null;
   });
-  cacheTime = now;
-  return cachedProjects;
+
+  repoStore.inflightProjects = promise;
+  return promise;
 }
 
 export async function getPublishedDbProjects(): Promise<ResolvedDbProject[]> {
@@ -420,16 +486,21 @@ const defaultContactSettings = {
 
 export async function getDbProfile(): Promise<ISiteProfile> {
   const now = Date.now();
-  if (cachedProfile && now - cacheTime < CACHE_TTL_MS) {
-    return cachedProfile;
+  if (repoStore.profileCache && now < repoStore.profileCache.expiresAt) {
+    return repoStore.profileCache.value;
+  }
+  if (repoStore.inflightProfile) {
+    return repoStore.inflightProfile;
   }
 
-  try {
-    await connectDB();
-    const rawDoc = await SiteProfileModel.findOne({}).lean();
-    if (rawDoc) {
-      const doc = toPlain(rawDoc) as any;
-      const cleanProfile: ISiteProfile = {
+  const promise = (async () => {
+    let dbFailed = false;
+    try {
+      await connectDB();
+      const rawDoc = await SiteProfileModel.findOne({}).lean();
+      if (rawDoc) {
+        const doc = toPlain(rawDoc) as any;
+        const cleanProfile: ISiteProfile = {
         name: doc.name || staticProfile.name,
         shortName: doc.shortName || staticProfile.shortName,
         jobTitle: doc.jobTitle || staticProfile.jobTitle,
@@ -578,16 +649,17 @@ export async function getDbProfile(): Promise<ISiteProfile> {
               }))
             : defaultFooterSettings.socialLinks,
         },
-      };
-      cachedProfile = toPlain(cleanProfile);
-      return cachedProfile;
+        };
+        repoStore.profileCache = { value: cleanProfile, expiresAt: Date.now() + CACHE_TTL_MS };
+        return cleanProfile;
+      }
+    } catch (err) {
+      dbFailed = true;
+      console.warn("MongoDB profile fetch failed, falling back to static:", err);
     }
-  } catch (err) {
-    console.warn("MongoDB profile fetch failed, falling back to static:", err);
-  }
 
-  // Fallback
-  return {
+    // Fallback
+    const fallbackProfile: ISiteProfile = {
     name: staticProfile.name,
     shortName: staticProfile.shortName,
     jobTitle: staticProfile.jobTitle,
@@ -674,20 +746,36 @@ export async function getDbProfile(): Promise<ISiteProfile> {
     },
     contactSettings: defaultContactSettings,
   };
+  repoStore.profileCache = {
+    value: fallbackProfile,
+    expiresAt: Date.now() + (dbFailed ? FALLBACK_TTL_MS : CACHE_TTL_MS),
+  };
+  return fallbackProfile;
+  })().finally(() => {
+    repoStore.inflightProfile = null;
+  });
+
+  repoStore.inflightProfile = promise;
+  return promise;
 }
 
 export async function getDbExperience(): Promise<IExperienceData> {
   const now = Date.now();
-  if (cachedExperience && now - cacheTime < CACHE_TTL_MS) {
-    return cachedExperience;
+  if (repoStore.experienceCache && now < repoStore.experienceCache.expiresAt) {
+    return repoStore.experienceCache.value;
+  }
+  if (repoStore.inflightExperience) {
+    return repoStore.inflightExperience;
   }
 
-  try {
-    await connectDB();
-    const doc = await ExperienceModel.findOne({}).lean();
-    if (doc) {
-      const plain = toPlain(doc) as any;
-      cachedExperience = toPlain({
+  const promise = (async () => {
+    let dbFailed = false;
+    try {
+      await connectDB();
+      const doc = await ExperienceModel.findOne({}).lean();
+      if (doc) {
+        const plain = toPlain(doc) as any;
+        const resolved: IExperienceData = {
         employers: (plain.employers || []).map((emp: any) => ({
           company: emp.company,
           promotion: emp.promotion ? { date: emp.promotion.date, label: emp.promotion.label } : undefined,
@@ -737,37 +825,55 @@ export async function getDbExperience(): Promise<IExperienceData> {
           name: t.name,
           use: t.use,
         })),
-      });
-      return cachedExperience;
+      };
+        repoStore.experienceCache = { value: resolved, expiresAt: Date.now() + CACHE_TTL_MS };
+        return resolved;
+      }
+    } catch (err) {
+      dbFailed = true;
+      console.warn("MongoDB experience fetch failed, falling back to static:", err);
     }
-  } catch (err) {
-    console.warn("MongoDB experience fetch failed, falling back to static:", err);
-  }
 
-  return {
-    employers: staticEmployers as any,
-    certifications: staticCertifications as any,
-    courseCertificates: staticCourseCertificates as any,
-    awards: staticAwards as any,
-    education: staticEducation as any,
-    volunteering: staticVolunteering as any,
-    languages: staticLanguages as any,
-    toolsInPractice: staticToolsInPractice as any,
-  };
+    const fallbackExp: IExperienceData = {
+      employers: staticEmployers as any,
+      certifications: staticCertifications as any,
+      courseCertificates: staticCourseCertificates as any,
+      awards: staticAwards as any,
+      education: staticEducation as any,
+      volunteering: staticVolunteering as any,
+      languages: staticLanguages as any,
+      toolsInPractice: staticToolsInPractice as any,
+    };
+    repoStore.experienceCache = {
+      value: fallbackExp,
+      expiresAt: Date.now() + (dbFailed ? FALLBACK_TTL_MS : CACHE_TTL_MS),
+    };
+    return fallbackExp;
+  })().finally(() => {
+    repoStore.inflightExperience = null;
+  });
+
+  repoStore.inflightExperience = promise;
+  return promise;
 }
 
 export async function getDbExpertise(): Promise<IExpertiseData> {
   const now = Date.now();
-  if (cachedExpertise && now - cacheTime < CACHE_TTL_MS) {
-    return cachedExpertise;
+  if (repoStore.expertiseCache && now < repoStore.expertiseCache.expiresAt) {
+    return repoStore.expertiseCache.value;
+  }
+  if (repoStore.inflightExpertise) {
+    return repoStore.inflightExpertise;
   }
 
-  try {
-    await connectDB();
-    const doc = await ExpertiseModel.findOne({}).lean();
-    if (doc) {
-      const plain = toPlain(doc) as any;
-      cachedExpertise = toPlain({
+  const promise = (async () => {
+    let dbFailed = false;
+    try {
+      await connectDB();
+      const doc = await ExpertiseModel.findOne({}).lean();
+      if (doc) {
+        const plain = toPlain(doc) as any;
+        const resolved: IExpertiseData = {
         areas: (plain.areas || []).map((a: any) => ({
           id: a.id,
           title: a.title,
@@ -787,17 +893,30 @@ export async function getDbExpertise(): Promise<IExpertiseData> {
           body: w.body,
           detail: w.detail,
         })),
-      });
-      return cachedExpertise;
+      };
+        repoStore.expertiseCache = { value: resolved, expiresAt: Date.now() + CACHE_TTL_MS };
+        return resolved;
+      }
+    } catch (err) {
+      dbFailed = true;
+      console.warn("MongoDB expertise fetch failed, falling back to static:", err);
     }
-  } catch (err) {
-    console.warn("MongoDB expertise fetch failed, falling back to static:", err);
-  }
 
-  return {
-    areas: staticExpertiseAreas as any,
-    workingApproach: staticWorkingApproach as any,
-  };
+    const fallbackExpertise: IExpertiseData = {
+      areas: staticExpertiseAreas as any,
+      workingApproach: staticWorkingApproach as any,
+    };
+    repoStore.expertiseCache = {
+      value: fallbackExpertise,
+      expiresAt: Date.now() + (dbFailed ? FALLBACK_TTL_MS : CACHE_TTL_MS),
+    };
+    return fallbackExpertise;
+  })().finally(() => {
+    repoStore.inflightExpertise = null;
+  });
+
+  repoStore.inflightExpertise = promise;
+  return promise;
 }
 
 export function getDbProjectDocs(project: ResolvedDbProject): {

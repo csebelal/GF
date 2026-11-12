@@ -1,6 +1,8 @@
 "use client";
 
+import Image from "next/image";
 import { useEffect, useRef, useState } from "react";
+import { shouldUnoptimizeImage } from "@/lib/image-utils";
 import type { ProjectCardData } from "@/lib/projects";
 import { buildThumbnailUrl } from "@/lib/youtube";
 import { Play } from "./Icons";
@@ -46,18 +48,20 @@ export function ProjectCover({ cover, category, title, hasVideo, priority = fals
   return (
     <div className={`relative overflow-hidden bg-tint ${className}`}>
       {src ? (
-        <img
+        <Image
           key={src}
           ref={imgRef}
           src={src}
           alt={alt}
-          loading={priority ? "eager" : "lazy"}
-          decoding="async"
+          fill
+          sizes="(min-width: 1024px) 45vw, (min-width: 640px) 50vw, 100vw"
+          priority={priority}
+          unoptimized={shouldUnoptimizeImage(src)}
           onError={() => setIndex((value) => value + 1)}
           onLoad={(event) => {
             if (src.includes("i.ytimg.com") && event.currentTarget.naturalWidth <= 120) setIndex((value) => value + 1);
           }}
-          className="absolute inset-0 size-full object-cover transition-transform duration-700 ease-[cubic-bezier(0.22,1,0.36,1)] group-hover:scale-[1.025]"
+          className="object-cover transition-transform duration-500 ease-[cubic-bezier(0.22,1,0.36,1)] motion-safe:group-hover:scale-[1.02]"
         />
       ) : (
         <PlaceholderCover category={category} title={title} />

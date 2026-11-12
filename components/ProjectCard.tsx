@@ -1,6 +1,6 @@
 import Link from "next/link";
 import type { ProjectCardData } from "@/lib/projects";
-import { ContentTypeBadge, ProvenanceBadge, SampleBadge, ToolList } from "./Badges";
+import { ContentTypeBadge, ProvenanceBadge, ToolList } from "./Badges";
 import { ArrowRight } from "./Icons";
 import { ProjectCover } from "./ProjectCover";
 
@@ -33,7 +33,6 @@ export function ProjectCard({ project, variant = "default", headingLevel = "h3",
         />
         <div className="flex flex-col p-6 sm:p-8 lg:col-span-5 lg:p-10">
           <div className="flex flex-wrap gap-2">
-            {project.isSample ? <SampleBadge /> : null}
             <ProvenanceBadge provenance={project.provenance} />
             <ContentTypeBadge type={project.contentType} />
           </div>
@@ -46,7 +45,7 @@ export function ProjectCard({ project, variant = "default", headingLevel = "h3",
           <p className="mt-4 text-[1.0625rem] leading-relaxed text-body">{project.summary}</p>
           <ToolList tools={project.tools} className="mt-6" />
           <span aria-hidden className="mt-auto inline-flex items-center gap-2 pt-8 text-[0.9375rem] font-semibold text-ink">
-            View project <ArrowRight className="transition-transform duration-200 group-hover:translate-x-1" />
+            View project <ArrowRight className="motion-safe:transition-transform duration-200 motion-safe:group-hover:translate-x-1" />
           </span>
         </div>
         <FocusRing />
@@ -56,7 +55,7 @@ export function ProjectCard({ project, variant = "default", headingLevel = "h3",
 
   const compact = variant === "compact";
   return (
-    <article className="group card relative flex h-full flex-col overflow-hidden transition-[box-shadow,transform] duration-300 hover:-translate-y-0.5 hover:shadow-lift">
+    <article className="group card relative flex h-full flex-col overflow-hidden transition-[box-shadow,border-color] duration-200 hover:border-line-strong hover:shadow-lift">
       <ProjectCover
         cover={project.cover}
         category={project.category}
@@ -67,7 +66,6 @@ export function ProjectCard({ project, variant = "default", headingLevel = "h3",
       />
       <div className={`flex flex-1 flex-col ${compact ? "p-5" : "p-6"}`}>
         <div className="flex flex-wrap items-center gap-2">
-          {project.isSample ? <SampleBadge /> : null}
           <ProvenanceBadge provenance={project.provenance} />
           <ContentTypeBadge type={project.contentType} />
         </div>

@@ -95,12 +95,20 @@ export function DocumentationRenderer({
       return <p>{children}</p>;
     },
     img: ({ src, alt, title }) => {
-      if (
-        typeof src !== "string" ||
-        !src ||
-        (!src.startsWith("/") && !/^https?:\/\//i.test(src) && !src.startsWith("data:image/"))
-      ) {
+      if (typeof src !== "string" || !src) {
         return null;
+      }
+      const isSafeRasterDataUri = /^data:image\/(?:png|jpe?g|webp|gif);base64,/i.test(src);
+      if (!isSafeUrl(src) && !isSafeRasterDataUri) {
+        return null;
+      }
+      if (isSafeRasterDataUri) {
+        return (
+          <figure>
+            <img src={src} alt={alt ?? ""} loading="lazy" decoding="async" />
+            {title ? <figcaption>{title}</figcaption> : null}
+          </figure>
+        );
       }
       return (
         <figure>

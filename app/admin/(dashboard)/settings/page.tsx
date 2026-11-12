@@ -1,20 +1,32 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import { Alert, Check, Eye, EyeOff, Lock, Mail, User } from "@/components/Icons";
+
+const focusRing =
+  "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#0e5f5b] focus-visible:ring-offset-2";
+
+const inputClass =
+  "h-10 w-full rounded-xl border border-[#d4cdc0] bg-white px-3.5 text-sm text-[#191c20] transition-colors duration-200 placeholder:text-[#646b73] hover:border-[#8b9198] focus-visible:border-[#0e5f5b] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#0e5f5b] focus-visible:ring-offset-1";
 
 export default function AdminSettingsPage() {
   const [name, setName] = useState("");
   const [email, setEmail] = useState("");
   const [loading, setLoading] = useState(true);
   const [savingAccount, setSavingAccount] = useState(false);
-  const [accountMsg, setAccountMsg] = useState<{ text: string; type: "success" | "error" } | null>(null);
+  const [accountMsg, setAccountMsg] = useState<{ text: string; type: "success" | "error" } | null>(
+    null
+  );
 
   // Password state
   const [currentPassword, setCurrentPassword] = useState("");
   const [newPassword, setNewPassword] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
+  const [showPasswords, setShowPasswords] = useState(false);
   const [savingPassword, setSavingPassword] = useState(false);
-  const [passwordMsg, setPasswordMsg] = useState<{ text: string; type: "success" | "error" } | null>(null);
+  const [passwordMsg, setPasswordMsg] = useState<{ text: string; type: "success" | "error" } | null>(
+    null
+  );
 
   useEffect(() => {
     fetch("/api/admin/settings")
@@ -46,9 +58,10 @@ export default function AdminSettingsPage() {
       const data = await res.json();
       if (!res.ok) throw new Error(data.error);
 
-      setAccountMsg({ text: "Account details updated successfully!", type: "success" });
-    } catch (err: any) {
-      setAccountMsg({ text: err.message || "Failed to update account.", type: "error" });
+      setAccountMsg({ text: "Account details updated successfully.", type: "success" });
+    } catch (err: unknown) {
+      const msg = err instanceof Error ? err.message : "Failed to update account.";
+      setAccountMsg({ text: msg, type: "error" });
     } finally {
       setSavingAccount(false);
     }
@@ -63,8 +76,8 @@ export default function AdminSettingsPage() {
       return;
     }
 
-    if (newPassword.length < 8) {
-      setPasswordMsg({ text: "Password must be at least 8 characters.", type: "error" });
+    if (newPassword.length < 10) {
+      setPasswordMsg({ text: "Password must be at least 10 characters long.", type: "error" });
       return;
     }
 
@@ -79,75 +92,115 @@ export default function AdminSettingsPage() {
       const data = await res.json();
       if (!res.ok) throw new Error(data.error);
 
-      setPasswordMsg({ text: "Password changed successfully!", type: "success" });
+      setPasswordMsg({
+        text: "Password updated successfully. Other active sessions have been signed out.",
+        type: "success",
+      });
       setCurrentPassword("");
       setNewPassword("");
       setConfirmPassword("");
-    } catch (err: any) {
-      setPasswordMsg({ text: err.message || "Failed to change password.", type: "error" });
+    } catch (err: unknown) {
+      const msg = err instanceof Error ? err.message : "Failed to change password.";
+      setPasswordMsg({ text: msg, type: "error" });
     } finally {
       setSavingPassword(false);
     }
   };
 
   if (loading) {
-    return <div className="p-8 text-center text-sm text-[#646b73]">Loading settings...</div>;
+    return (
+      <div className="mx-auto max-w-3xl rounded-2xl border border-[#e6e1d8] bg-white p-12 text-center text-sm text-[#4c535b]">
+        Loading account settings...
+      </div>
+    );
   }
 
   return (
     <div className="mx-auto max-w-3xl space-y-8 pb-16">
-      <div>
-        <h2 className="text-xl font-bold text-[#191c20]">Account & Security Settings</h2>
-        <p className="text-xs text-[#646b73]">
-          Manage your administrator profile, login email, and password
+      <header>
+        <h2 className="text-xl font-bold tracking-tight text-[#191c20]">
+          Account & Security Settings
+        </h2>
+        <p className="mt-1 text-sm text-[#4c535b]">
+          Manage your administrator display profile, login email, and password policy.
         </p>
-      </div>
+      </header>
 
       {/* Account Info Form */}
-      <form onSubmit={handleUpdateAccount} className="rounded-xl border border-[#e6e1d8] bg-white p-6 shadow-sm space-y-4">
-        <h3 className="text-sm font-bold uppercase tracking-wider text-[#0e5f5b]">1. Admin Account</h3>
+      <form
+        onSubmit={handleUpdateAccount}
+        className="space-y-5 rounded-2xl border border-[#e6e1d8] bg-white p-6 shadow-sm sm:p-7"
+      >
+        <div className="flex items-center gap-2 border-b border-[#e6e1d8] pb-3.5">
+          <User className="size-4 text-[#0e5f5b]" />
+          <h3 className="text-sm font-bold uppercase tracking-[0.08em] text-[#0e5f5b]">
+            1. Admin Account
+          </h3>
+        </div>
 
-        {accountMsg && (
+        {accountMsg ? (
           <div
-            className={`rounded-lg p-3 text-xs ${
+            role={accountMsg.type === "error" ? "alert" : "status"}
+            aria-live="polite"
+            className={`flex items-start gap-2.5 rounded-xl border p-3.5 text-sm ${
               accountMsg.type === "success"
-                ? "border border-green-200 bg-green-50 text-green-800"
-                : "border border-red-200 bg-red-50 text-red-800"
+                ? "border-green-200 bg-green-50 text-[#166534]"
+                : "border-red-200 bg-red-50 text-[#991b1b]"
             }`}
           >
-            {accountMsg.text}
+            {accountMsg.type === "success" ? (
+              <Check className="mt-0.5 size-4 shrink-0" />
+            ) : (
+              <Alert className="mt-0.5 size-4 shrink-0" />
+            )}
+            <span>{accountMsg.text}</span>
           </div>
-        )}
+        ) : null}
 
         <div className="grid gap-4 sm:grid-cols-2">
           <div>
-            <label className="block text-xs font-semibold text-[#4c535b]">Display Name</label>
+            <label htmlFor="settings-name" className="block text-xs font-semibold text-[#4c535b]">
+              Display Name
+            </label>
             <input
+              id="settings-name"
+              name="name"
               type="text"
               required
+              autoComplete="name"
               value={name}
               onChange={(e) => setName(e.target.value)}
-              className="mt-1 w-full rounded-lg border border-[#d4cdc0] px-3 py-2 text-sm text-[#191c20] focus:border-[#0e5f5b] focus:outline-none"
+              className={`${inputClass} mt-1.5`}
             />
           </div>
 
           <div>
-            <label className="block text-xs font-semibold text-[#4c535b]">Login Email</label>
-            <input
-              type="email"
-              required
-              value={email}
-              onChange={(e) => setEmail(e.target.value)}
-              className="mt-1 w-full rounded-lg border border-[#d4cdc0] px-3 py-2 text-sm text-[#191c20] focus:border-[#0e5f5b] focus:outline-none"
-            />
+            <label htmlFor="settings-email" className="block text-xs font-semibold text-[#4c535b]">
+              Login Email
+            </label>
+            <div className="relative mt-1.5">
+              <span className="pointer-events-none absolute inset-y-0 left-0 flex items-center pl-3 text-[#4c535b]">
+                <Mail className="size-4" />
+              </span>
+              <input
+                id="settings-email"
+                name="email"
+                type="email"
+                required
+                autoComplete="email"
+                value={email}
+                onChange={(e) => setEmail(e.target.value)}
+                className={`${inputClass} pl-9`}
+              />
+            </div>
           </div>
         </div>
 
-        <div className="flex justify-end pt-2">
+        <div className="flex justify-end pt-1">
           <button
             type="submit"
             disabled={savingAccount}
-            className="rounded-lg bg-[#0e5f5b] px-4 py-2 text-xs font-semibold text-white shadow-sm transition hover:bg-[#0a4744] disabled:opacity-50"
+            className={`inline-flex min-h-[40px] cursor-pointer items-center rounded-xl bg-[#0e5f5b] px-4 py-2 text-xs font-semibold text-white shadow-sm transition-colors duration-200 hover:bg-[#0a4744] disabled:cursor-not-allowed disabled:opacity-50 ${focusRing}`}
           >
             {savingAccount ? "Saving..." : "Save Account Details"}
           </button>
@@ -155,66 +208,122 @@ export default function AdminSettingsPage() {
       </form>
 
       {/* Change Password Form */}
-      <form onSubmit={handleChangePassword} className="rounded-xl border border-[#e6e1d8] bg-white p-6 shadow-sm space-y-4">
-        <h3 className="text-sm font-bold uppercase tracking-wider text-[#0e5f5b]">2. Change Password</h3>
+      <form
+        onSubmit={handleChangePassword}
+        className="space-y-5 rounded-2xl border border-[#e6e1d8] bg-white p-6 shadow-sm sm:p-7"
+      >
+        <div className="flex items-center justify-between border-b border-[#e6e1d8] pb-3.5">
+          <div className="flex items-center gap-2">
+            <Lock className="size-4 text-[#0e5f5b]" />
+            <h3 className="text-sm font-bold uppercase tracking-[0.08em] text-[#0e5f5b]">
+              2. Change Password
+            </h3>
+          </div>
+          <button
+            type="button"
+            onClick={() => setShowPasswords((prev) => !prev)}
+            aria-pressed={showPasswords}
+            className={`inline-flex min-h-[32px] cursor-pointer items-center gap-1.5 rounded-lg px-2.5 py-1 text-xs font-medium text-[#4c535b] transition-colors duration-200 hover:bg-[#f3efe8] hover:text-[#191c20] ${focusRing}`}
+          >
+            {showPasswords ? <EyeOff className="size-3.5" /> : <Eye className="size-3.5" />}
+            <span>{showPasswords ? "Hide passwords" : "Show passwords"}</span>
+          </button>
+        </div>
 
-        {passwordMsg && (
+        {passwordMsg ? (
           <div
-            className={`rounded-lg p-3 text-xs ${
+            role={passwordMsg.type === "error" ? "alert" : "status"}
+            aria-live="polite"
+            className={`flex items-start gap-2.5 rounded-xl border p-3.5 text-sm ${
               passwordMsg.type === "success"
-                ? "border border-green-200 bg-green-50 text-green-800"
-                : "border border-red-200 bg-red-50 text-red-800"
+                ? "border-green-200 bg-green-50 text-[#166534]"
+                : "border-red-200 bg-red-50 text-[#991b1b]"
             }`}
           >
-            {passwordMsg.text}
+            {passwordMsg.type === "success" ? (
+              <Check className="mt-0.5 size-4 shrink-0" />
+            ) : (
+              <Alert className="mt-0.5 size-4 shrink-0" />
+            )}
+            <span>{passwordMsg.text}</span>
           </div>
-        )}
+        ) : null}
 
-        <div className="space-y-3">
+        <div className="space-y-4">
           <div>
-            <label className="block text-xs font-semibold text-[#4c535b]">Current Password</label>
+            <label
+              htmlFor="settings-current-password"
+              className="block text-xs font-semibold text-[#4c535b]"
+            >
+              Current Password
+            </label>
             <input
-              type="password"
+              id="settings-current-password"
+              name="currentPassword"
+              type={showPasswords ? "text" : "password"}
               required
+              autoComplete="current-password"
               value={currentPassword}
               onChange={(e) => setCurrentPassword(e.target.value)}
-              placeholder="••••••••••••"
-              className="mt-1 w-full rounded-lg border border-[#d4cdc0] px-3 py-2 text-sm text-[#191c20] focus:border-[#0e5f5b] focus:outline-none"
+              placeholder="Enter current password"
+              className={`${inputClass} mt-1.5`}
             />
           </div>
 
           <div className="grid gap-4 sm:grid-cols-2">
             <div>
-              <label className="block text-xs font-semibold text-[#4c535b]">New Password</label>
+              <label
+                htmlFor="settings-new-password"
+                className="block text-xs font-semibold text-[#4c535b]"
+              >
+                New Password
+              </label>
               <input
-                type="password"
+                id="settings-new-password"
+                name="newPassword"
+                type={showPasswords ? "text" : "password"}
                 required
+                autoComplete="new-password"
+                aria-describedby="password-policy-hint"
                 value={newPassword}
                 onChange={(e) => setNewPassword(e.target.value)}
-                placeholder="At least 8 characters"
-                className="mt-1 w-full rounded-lg border border-[#d4cdc0] px-3 py-2 text-sm text-[#191c20] focus:border-[#0e5f5b] focus:outline-none"
+                placeholder="Min. 10 characters"
+                className={`${inputClass} mt-1.5`}
               />
             </div>
 
             <div>
-              <label className="block text-xs font-semibold text-[#4c535b]">Confirm New Password</label>
+              <label
+                htmlFor="settings-confirm-password"
+                className="block text-xs font-semibold text-[#4c535b]"
+              >
+                Confirm New Password
+              </label>
               <input
-                type="password"
+                id="settings-confirm-password"
+                name="confirmPassword"
+                type={showPasswords ? "text" : "password"}
                 required
+                autoComplete="new-password"
                 value={confirmPassword}
                 onChange={(e) => setConfirmPassword(e.target.value)}
                 placeholder="Repeat new password"
-                className="mt-1 w-full rounded-lg border border-[#d4cdc0] px-3 py-2 text-sm text-[#191c20] focus:border-[#0e5f5b] focus:outline-none"
+                className={`${inputClass} mt-1.5`}
               />
             </div>
           </div>
+
+          <p id="password-policy-hint" className="text-xs leading-relaxed text-[#4c535b]">
+            Must be at least 10 characters and include uppercase, lowercase, a number, and a special
+            symbol.
+          </p>
         </div>
 
-        <div className="flex justify-end pt-2">
+        <div className="flex justify-end pt-1">
           <button
             type="submit"
             disabled={savingPassword}
-            className="rounded-lg bg-[#0e5f5b] px-4 py-2 text-xs font-semibold text-white shadow-sm transition hover:bg-[#0a4744] disabled:opacity-50"
+            className={`inline-flex min-h-[40px] cursor-pointer items-center rounded-xl bg-[#0e5f5b] px-4 py-2 text-xs font-semibold text-white shadow-sm transition-colors duration-200 hover:bg-[#0a4744] disabled:cursor-not-allowed disabled:opacity-50 ${focusRing}`}
           >
             {savingPassword ? "Updating Password..." : "Update Password"}
           </button>

@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
+import { ChevronDown } from "./Icons";
 
 export interface TocItem {
   id: string;
@@ -19,23 +20,27 @@ function useActiveHeading(ids: string[]) {
 
   useEffect(() => {
     let frame = 0;
+    const elements = ids.map((id) => ({ id, el: document.getElementById(id) }));
+
     const update = () => {
       frame = 0;
       let current = ids[0];
-      for (const id of ids) {
-        const el = document.getElementById(id);
-        if (!el) continue;
-        if (el.getBoundingClientRect().top - 150 <= 0) current = id;
+      for (const entry of elements) {
+        if (!entry.el || !entry.el.isConnected) {
+          entry.el = document.getElementById(entry.id);
+        }
+        if (!entry.el) continue;
+        if (entry.el.getBoundingClientRect().top - 150 <= 0) current = entry.id;
         else break;
       }
-      setActive(current);
+      setActive((prev) => (prev === current ? prev : current));
     };
     const onScroll = () => {
       if (!frame) frame = requestAnimationFrame(update);
     };
     update();
     window.addEventListener("scroll", onScroll, { passive: true });
-    window.addEventListener("resize", onScroll);
+    window.addEventListener("resize", onScroll, { passive: true });
     return () => {
       cancelAnimationFrame(frame);
       window.removeEventListener("scroll", onScroll);
@@ -70,7 +75,7 @@ export function TableOfContents({ items, variant }: TableOfContentsProps) {
                 item.level === 1 ? "pl-4 font-medium" : item.level === 2 ? "pl-4" : "pl-7 text-[0.8125rem]"
               } ${
                 isActive
-                  ? "border-accent text-ink"
+                  ? "border-accent font-semibold text-accent"
                   : "border-transparent text-muted hover:border-line-strong hover:text-ink"
               }`}
             >
@@ -87,9 +92,10 @@ export function TableOfContents({ items, variant }: TableOfContentsProps) {
       <details ref={detailsRef} className="group card overflow-hidden">
         <summary className="flex min-h-12 cursor-pointer list-none items-center justify-between gap-3 px-4 text-[0.9375rem] font-semibold text-ink [&::-webkit-details-marker]:hidden">
           On this page
-          <span aria-hidden className="text-muted transition-transform group-open:rotate-180">
-            ▾
-          </span>
+          <ChevronDown
+            aria-hidden="true"
+            className="size-4 text-muted transition-transform duration-200 group-open:rotate-180"
+          />
         </summary>
         <nav aria-label="On this page" className="max-h-[60vh] overflow-y-auto border-t border-line px-4 py-3 text-sm">
           {list}

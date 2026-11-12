@@ -132,9 +132,13 @@ export function resetRateLimit(key: string) {
 
 /** Pre-configured rate limiting profiles */
 export const RateLimiters = {
-  /** Login endpoint: 5 attempts per 15 minutes, with 15-minute lockout */
+  /** Login endpoint: 5 attempts per 15 minutes per IP, with 15-minute lockout */
   authLogin: (ip: string, req?: Request) =>
     checkRateLimit(`login:${ip}`, { max: 5, windowSeconds: 15 * 60, lockoutSeconds: 15 * 60 }, req),
+
+  /** Login endpoint per-account limiter: prevents distributed/XFF-spoofed brute force */
+  authLoginEmail: (email: string, req?: Request) =>
+    checkRateLimit(`login_email:${email.toLowerCase().trim()}`, { max: 8, windowSeconds: 15 * 60, lockoutSeconds: 15 * 60 }, req),
 
   /** Password change: 5 attempts per 10 minutes */
   passwordChange: (ip: string, req?: Request) =>

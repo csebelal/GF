@@ -2,6 +2,19 @@
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
+import { Alert, Check, ImageIcon, Plus } from "@/components/Icons";
+import {
+  AdminAlert,
+  AdminCard,
+  AdminField,
+  adminFocusRing,
+  adminInputClass,
+  adminInputCompactClass,
+  adminPrimaryBtnClass,
+  adminSecondaryBtnClass,
+  adminTextareaClass,
+} from "@/components/admin/ui/FormPrimitives";
+import { MarkdownEditor } from "@/components/admin/ui/MarkdownEditor";
 import { parseYouTubeUrl } from "@/lib/youtube";
 
 interface ProjectFormProps {
@@ -37,7 +50,6 @@ export function ProjectForm({ initialData, isNew = false }: ProjectFormProps) {
   const [toolsInput, setToolsInput] = useState(form.tools ? form.tools.join(", ") : "");
   const [saving, setSaving] = useState(false);
   const [uploadingCover, setUploadingCover] = useState(false);
-  const [previewDocs, setPreviewDocs] = useState(false);
   const [message, setMessage] = useState<{ text: string; type: "success" | "error" } | null>(null);
 
   const generateSlug = () => {
@@ -76,6 +88,7 @@ export function ProjectForm({ initialData, isNew = false }: ProjectFormProps) {
       setMessage({ text: err.message || "Failed to upload image", type: "error" });
     } finally {
       setUploadingCover(false);
+      e.target.value = "";
     }
   };
 
@@ -106,22 +119,6 @@ export function ProjectForm({ initialData, isNew = false }: ProjectFormProps) {
     const updated = [...(form.videos || [])];
     updated[index] = { ...updated[index], [field]: value };
     setForm({ ...form, videos: updated });
-  };
-
-  const insertMarkdown = (before: string, after: string = "", placeholder: string = "text") => {
-    const textarea = document.getElementById("documentation-editor") as HTMLTextAreaElement | null;
-    if (!textarea) return;
-    const start = textarea.selectionStart;
-    const end = textarea.selectionEnd;
-    const text = textarea.value;
-    const selected = text.substring(start, end);
-    const insert = `${before}${selected || placeholder}${after}`;
-    const nextValue = text.substring(0, start) + insert + text.substring(end);
-    setForm({ ...form, documentationContent: nextValue });
-    setTimeout(() => {
-      textarea.focus();
-      textarea.setSelectionRange(start + before.length, start + before.length + (selected ? selected.length : placeholder.length));
-    }, 50);
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -172,13 +169,13 @@ export function ProjectForm({ initialData, isNew = false }: ProjectFormProps) {
 
   return (
     <form onSubmit={handleSubmit} className="mx-auto max-w-4xl space-y-8 pb-16">
-      <div className="flex items-center justify-between">
+      <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
         <div>
-          <h2 className="text-xl font-bold text-[#191c20]">
+          <h2 className="text-xl font-bold tracking-tight text-ink">
             {isNew ? "Create New Project" : `Edit Project: ${form.title}`}
           </h2>
-          <p className="text-xs text-[#646b73]">
-            Fill in the case study details, video walkthroughs, and technical write-up
+          <p className="mt-0.5 text-sm text-body">
+            Fill in the case study details, video walkthroughs, and technical write-up.
           </p>
         </div>
 
@@ -186,298 +183,340 @@ export function ProjectForm({ initialData, isNew = false }: ProjectFormProps) {
           <button
             type="button"
             onClick={() => router.push("/admin/projects")}
-            className="rounded-lg border border-[#d4cdc0] px-4 py-2 text-xs font-semibold text-[#4c535b] hover:bg-[#f3efe8]"
+            className={adminSecondaryBtnClass}
           >
             Cancel
           </button>
-          <button
-            type="submit"
-            disabled={saving}
-            className="rounded-lg bg-[#0e5f5b] px-5 py-2 text-xs font-semibold text-white shadow-sm transition hover:bg-[#0a4744] disabled:opacity-50"
-          >
+          <button type="submit" disabled={saving} className={adminPrimaryBtnClass}>
             {saving ? "Saving..." : isNew ? "Publish Project" : "Save Changes"}
           </button>
         </div>
       </div>
 
-      {message && (
-        <div
-          className={`rounded-lg p-3 text-sm ${
-            message.type === "success"
-              ? "border border-green-200 bg-green-50 text-green-800"
-              : "border border-red-200 bg-red-50 text-red-800"
-          }`}
-        >
-          {message.text}
-        </div>
-      )}
+      <AdminAlert message={message} />
 
       {/* Main Metadata */}
-      <div className="rounded-xl border border-[#e6e1d8] bg-white p-6 shadow-sm space-y-4">
-        <h3 className="text-sm font-bold uppercase tracking-wider text-[#0e5f5b]">1. Project Details</h3>
+      <AdminCard className="space-y-5">
+        <h3 className="text-sm font-bold uppercase tracking-[0.08em] text-accent">
+          1. Project Details
+        </h3>
 
         <div className="grid gap-4 sm:grid-cols-2">
-          <div className="sm:col-span-2">
-            <label className="block text-xs font-semibold text-[#4c535b]">Project Title</label>
-            <input
-              type="text"
-              required
-              value={form.title || ""}
-              onChange={(e) => setForm({ ...form, title: e.target.value })}
-              placeholder="e.g. Lead routing Flow for inbound enterprise accounts"
-              className="mt-1 w-full rounded-lg border border-[#d4cdc0] px-3 py-2 text-sm text-[#191c20] focus:border-[#0e5f5b] focus:outline-none"
-            />
-          </div>
+          <AdminField label="Project Title" className="sm:col-span-2">
+            {({ id }) => (
+              <input
+                id={id}
+                type="text"
+                required
+                value={form.title || ""}
+                onChange={(e) => setForm({ ...form, title: e.target.value })}
+                placeholder="e.g. Lead routing Flow for inbound enterprise accounts"
+                className={adminInputClass}
+              />
+            )}
+          </AdminField>
 
-          <div>
-            <div className="flex items-center justify-between">
-              <label className="block text-xs font-semibold text-[#4c535b]">URL Slug</label>
+          <AdminField
+            label="URL Slug"
+            action={
               <button
                 type="button"
                 onClick={generateSlug}
-                className="text-[11px] font-semibold text-[#0e5f5b] hover:underline"
+                className={`cursor-pointer rounded px-1.5 py-0.5 text-[11px] font-semibold text-accent hover:underline ${adminFocusRing}`}
               >
                 Auto-generate
               </button>
-            </div>
-            <input
-              type="text"
-              required
-              value={form.slug || ""}
-              onChange={(e) => setForm({ ...form, slug: e.target.value.toLowerCase().trim() })}
-              placeholder="e.g. lead-routing-flow"
-              className="mt-1 w-full rounded-lg border border-[#d4cdc0] px-3 py-2 text-sm text-[#191c20] focus:border-[#0e5f5b] focus:outline-none"
-            />
-          </div>
+            }
+          >
+            {({ id }) => (
+              <input
+                id={id}
+                type="text"
+                required
+                value={form.slug || ""}
+                onChange={(e) => setForm({ ...form, slug: e.target.value.toLowerCase().trim() })}
+                placeholder="e.g. lead-routing-flow"
+                className={adminInputClass}
+              />
+            )}
+          </AdminField>
 
-          <div>
-            <label className="block text-xs font-semibold text-[#4c535b]">Category</label>
-            <input
-              type="text"
-              required
-              value={form.category || ""}
-              onChange={(e) => setForm({ ...form, category: e.target.value })}
-              placeholder="e.g. Salesforce Automation"
-              className="mt-1 w-full rounded-lg border border-[#d4cdc0] px-3 py-2 text-sm text-[#191c20] focus:border-[#0e5f5b] focus:outline-none"
-            />
-          </div>
+          <AdminField label="Category">
+            {({ id }) => (
+              <input
+                id={id}
+                type="text"
+                required
+                value={form.category || ""}
+                onChange={(e) => setForm({ ...form, category: e.target.value })}
+                placeholder="e.g. Salesforce Automation"
+                className={adminInputClass}
+              />
+            )}
+          </AdminField>
 
-          <div>
-            <label className="block text-xs font-semibold text-[#4c535b]">Status</label>
-            <select
-              value={form.status || "published"}
-              onChange={(e) => setForm({ ...form, status: e.target.value })}
-              className="mt-1 w-full rounded-lg border border-[#d4cdc0] px-3 py-2 text-sm text-[#191c20] focus:border-[#0e5f5b] focus:outline-none"
-            >
-              <option value="published">Published (Visible on site)</option>
-              <option value="draft">Draft (Hidden from public site)</option>
-            </select>
-          </div>
+          <AdminField label="Status">
+            {({ id }) => (
+              <select
+                id={id}
+                value={form.status || "published"}
+                onChange={(e) => setForm({ ...form, status: e.target.value })}
+                className={adminInputClass}
+              >
+                <option value="published">Published (Visible on site)</option>
+                <option value="draft">Draft (Hidden from public site)</option>
+              </select>
+            )}
+          </AdminField>
 
-          <div>
-            <label className="block text-xs font-semibold text-[#4c535b]">Provenance</label>
-            <select
-              value={form.provenance || "independent"}
-              onChange={(e) => setForm({ ...form, provenance: e.target.value })}
-              className="mt-1 w-full rounded-lg border border-[#d4cdc0] px-3 py-2 text-sm text-[#191c20] focus:border-[#0e5f5b] focus:outline-none"
-            >
-              <option value="professional">Professional (Real client/employer work)</option>
-              <option value="independent">Independent (Self-directed/Developer Org)</option>
-              <option value="illustrative">Illustrative (Concept / Demo)</option>
-            </select>
-          </div>
+          <AdminField label="Provenance">
+            {({ id }) => (
+              <select
+                id={id}
+                value={form.provenance || "independent"}
+                onChange={(e) => setForm({ ...form, provenance: e.target.value })}
+                className={adminInputClass}
+              >
+                <option value="professional">Professional (Real client/employer work)</option>
+                <option value="independent">Independent (Self-directed/Developer Org)</option>
+                <option value="illustrative">Illustrative (Concept / Demo)</option>
+              </select>
+            )}
+          </AdminField>
 
-          <div>
-            <label className="block text-xs font-semibold text-[#4c535b]">Date (YYYY or YYYY-MM)</label>
-            <input
-              type="text"
-              value={form.date || ""}
-              onChange={(e) => setForm({ ...form, date: e.target.value })}
-              placeholder="2025-06"
-              className="mt-1 w-full rounded-lg border border-[#d4cdc0] px-3 py-2 text-sm text-[#191c20] focus:border-[#0e5f5b] focus:outline-none"
-            />
-          </div>
+          <AdminField label="Date (YYYY or YYYY-MM)">
+            {({ id }) => (
+              <input
+                id={id}
+                type="text"
+                value={form.date || ""}
+                onChange={(e) => setForm({ ...form, date: e.target.value })}
+                placeholder="2025-06"
+                className={adminInputClass}
+              />
+            )}
+          </AdminField>
 
-          <div>
-            <label className="block text-xs font-semibold text-[#4c535b]">Role / Contribution</label>
-            <input
-              type="text"
-              value={form.role || ""}
-              onChange={(e) => setForm({ ...form, role: e.target.value })}
-              placeholder="Design, build and testing"
-              className="mt-1 w-full rounded-lg border border-[#d4cdc0] px-3 py-2 text-sm text-[#191c20] focus:border-[#0e5f5b] focus:outline-none"
-            />
-          </div>
+          <AdminField label="Role / Contribution">
+            {({ id }) => (
+              <input
+                id={id}
+                type="text"
+                value={form.role || ""}
+                onChange={(e) => setForm({ ...form, role: e.target.value })}
+                placeholder="Design, build and testing"
+                className={adminInputClass}
+              />
+            )}
+          </AdminField>
 
-          <div className="sm:col-span-2">
-            <label className="block text-xs font-semibold text-[#4c535b]">Tools (comma separated)</label>
-            <input
-              type="text"
-              value={toolsInput}
-              onChange={(e) => setToolsInput(e.target.value)}
-              placeholder="Salesforce Flow, Service Cloud, Data Loader"
-              className="mt-1 w-full rounded-lg border border-[#d4cdc0] px-3 py-2 text-sm text-[#191c20] focus:border-[#0e5f5b] focus:outline-none"
-            />
-          </div>
+          <AdminField label="Tools (comma separated)" className="sm:col-span-2">
+            {({ id }) => (
+              <input
+                id={id}
+                type="text"
+                value={toolsInput}
+                onChange={(e) => setToolsInput(e.target.value)}
+                placeholder="Salesforce Flow, Service Cloud, Data Loader"
+                className={adminInputClass}
+              />
+            )}
+          </AdminField>
 
-          <div className="sm:col-span-2 flex items-center gap-2 pt-2">
+          <div className="sm:col-span-2 flex items-center gap-2.5 pt-1">
             <input
               type="checkbox"
               id="featured"
               checked={Boolean(form.featured)}
               onChange={(e) => setForm({ ...form, featured: e.target.checked })}
-              className="size-4 rounded border-[#d4cdc0] text-[#0e5f5b] focus:ring-[#0e5f5b]"
+              className={`size-4 cursor-pointer rounded border-line-strong text-accent ${adminFocusRing}`}
             />
-            <label htmlFor="featured" className="text-xs font-semibold text-[#191c20]">
+            <label htmlFor="featured" className="cursor-pointer text-xs font-semibold text-ink">
               Featured on Home Page project showcase
             </label>
           </div>
         </div>
-      </div>
+      </AdminCard>
 
       {/* Summary & Overview */}
-      <div className="rounded-xl border border-[#e6e1d8] bg-white p-6 shadow-sm space-y-4">
-        <h3 className="text-sm font-bold uppercase tracking-wider text-[#0e5f5b]">2. Summary & Overview</h3>
+      <AdminCard className="space-y-5">
+        <h3 className="text-sm font-bold uppercase tracking-[0.08em] text-accent">
+          2. Summary & Overview
+        </h3>
 
-        <div>
-          <label className="block text-xs font-semibold text-[#4c535b]">
-            Short Summary (1-2 sentences for cards & search)
-          </label>
-          <textarea
-            rows={2}
-            required
-            value={form.summary || ""}
-            onChange={(e) => setForm({ ...form, summary: e.target.value })}
-            placeholder="A record-triggered Flow that inspects incoming leads, evaluates routing criteria and assigns them..."
-            className="mt-1 w-full rounded-lg border border-[#d4cdc0] px-3 py-2 text-sm text-[#191c20] focus:border-[#0e5f5b] focus:outline-none"
-          />
-        </div>
-
-        <div>
-          <label className="block text-xs font-semibold text-[#4c535b]">
-            Project Overview (Markdown allowed)
-          </label>
-          <textarea
-            rows={4}
-            value={form.overview || ""}
-            onChange={(e) => setForm({ ...form, overview: e.target.value })}
-            placeholder="Detailed description of the business problem, requirements, and stakeholders..."
-            className="mt-1 w-full rounded-lg border border-[#d4cdc0] px-3 py-2 text-sm text-[#191c20] focus:border-[#0e5f5b] focus:outline-none font-mono text-xs"
-          />
-        </div>
-      </div>
-
-      {/* Cover Image */}
-      <div className="rounded-xl border border-[#e6e1d8] bg-white p-6 shadow-sm space-y-4">
-        <h3 className="text-sm font-bold uppercase tracking-wider text-[#0e5f5b]">3. Cover Image / Poster</h3>
-        <div className="flex items-center gap-4">
-          {form.coverImage?.src && (
-            <img
-              src={form.coverImage.src}
-              alt="Cover preview"
-              className="h-20 w-32 rounded-lg object-cover border border-[#e6e1d8]"
+        <AdminField label="Short Summary (1-2 sentences for cards & search)">
+          {({ id }) => (
+            <textarea
+              id={id}
+              rows={2}
+              required
+              value={form.summary || ""}
+              onChange={(e) => setForm({ ...form, summary: e.target.value })}
+              placeholder="A record-triggered Flow that inspects incoming leads, evaluates routing criteria and assigns them..."
+              className={adminTextareaClass}
             />
           )}
-          <div className="flex-1 space-y-2">
-            <label className="inline-block cursor-pointer rounded-lg border border-dashed border-[#0e5f5b] bg-[#e1eeec]/40 px-4 py-2 text-xs font-semibold text-[#0e5f5b] hover:bg-[#e1eeec]">
-              <span>{uploadingCover ? "Uploading Image..." : "Upload Cover Image / SVG"}</span>
+        </AdminField>
+
+        <AdminField label="Project Overview">
+          {({ id }) => (
+            <MarkdownEditor
+              id={id}
+              variant="compact"
+              rows={5}
+              value={form.overview || ""}
+              onChange={(overview) => setForm({ ...form, overview })}
+              placeholder="Detailed description of the business problem, requirements, and stakeholders..."
+              ariaLabel="Project overview Markdown editor"
+            />
+          )}
+        </AdminField>
+      </AdminCard>
+
+      {/* Cover Image */}
+      <AdminCard className="space-y-4">
+        <h3 className="text-sm font-bold uppercase tracking-[0.08em] text-accent">
+          3. Cover Image / Poster
+        </h3>
+        <div className="flex flex-col gap-4 sm:flex-row sm:items-center">
+          {form.coverImage?.src ? (
+            <img
+              src={form.coverImage.src}
+              alt={form.coverImage.alt || "Cover preview"}
+              className="h-20 w-32 shrink-0 rounded-xl border border-line object-cover"
+            />
+          ) : null}
+          <div className="flex-1 space-y-2.5">
+            <label
+              className={`inline-flex min-h-[38px] cursor-pointer items-center gap-2 rounded-xl border border-dashed border-accent bg-accent-soft/50 px-4 py-2 text-xs font-semibold text-accent-strong transition-colors duration-200 hover:bg-accent-soft focus-within:ring-2 focus-within:ring-accent focus-within:ring-offset-2 ${
+                uploadingCover ? "pointer-events-none opacity-60" : ""
+              }`}
+            >
+              <ImageIcon className="size-4" />
+              <span>{uploadingCover ? "Uploading Image..." : "Upload Cover Image (PNG, JPG, WebP)"}</span>
               <input
                 type="file"
-                accept="image/*"
-                className="hidden"
+                accept=".png,.jpg,.jpeg,.webp,image/png,image/jpeg,image/webp"
+                className="sr-only"
                 onChange={handleCoverUpload}
                 disabled={uploadingCover}
               />
             </label>
-            <input
-              type="text"
-              value={form.coverImage?.src || ""}
-              onChange={(e) =>
-                setForm({
-                  ...form,
-                  coverImage: { ...form.coverImage, src: e.target.value },
-                })
-              }
-              placeholder="Or enter path e.g. /images/samples/lead-routing-cover.svg"
-              className="w-full rounded-lg border border-[#d4cdc0] px-3 py-1.5 text-xs text-[#191c20]"
-            />
+            <AdminField label="Cover Image URL / Path">
+              {({ id }) => (
+                <input
+                  id={id}
+                  type="text"
+                  value={form.coverImage?.src || ""}
+                  onChange={(e) =>
+                    setForm({
+                      ...form,
+                      coverImage: { ...form.coverImage, src: e.target.value },
+                    })
+                  }
+                  placeholder="Or enter path e.g. /images/samples/lead-routing-cover.svg"
+                  className={adminInputCompactClass}
+                />
+              )}
+            </AdminField>
           </div>
         </div>
-      </div>
+      </AdminCard>
 
       {/* Videos Section */}
-      <div className="rounded-xl border border-[#e6e1d8] bg-white p-6 shadow-sm space-y-4">
+      <AdminCard className="space-y-4">
         <div className="flex items-center justify-between">
-          <h3 className="text-sm font-bold uppercase tracking-wider text-[#0e5f5b]">
+          <h3 className="text-sm font-bold uppercase tracking-[0.08em] text-accent">
             4. YouTube Walkthrough Videos ({form.videos?.length || 0})
           </h3>
           <button
             type="button"
             onClick={addVideo}
-            className="rounded-lg bg-[#e1eeec] px-3 py-1 text-xs font-semibold text-[#0e5f5b] hover:bg-[#b9d6d2]"
+            className={`inline-flex min-h-[34px] cursor-pointer items-center gap-1.5 rounded-xl bg-accent-soft px-3 py-1.5 text-xs font-semibold text-accent-strong transition-colors duration-200 hover:bg-accent-line ${adminFocusRing}`}
           >
-            + Add Video
+            <Plus className="size-3.5" />
+            <span>Add Video</span>
           </button>
         </div>
 
         {(form.videos || []).map((video: any, idx: number) => {
           const parsed = parseYouTubeUrl(video.youtubeUrl || "");
           return (
-            <div key={idx} className="rounded-lg border border-[#e6e1d8] bg-[#faf8f4] p-4 space-y-3">
+            <div key={idx} className="space-y-3 rounded-xl border border-line bg-canvas p-4">
               <div className="flex items-center justify-between">
-                <span className="text-xs font-bold text-[#191c20]">Video #{idx + 1}</span>
+                <span className="text-xs font-bold text-ink">Video #{idx + 1}</span>
                 <button
                   type="button"
                   onClick={() => removeVideo(idx)}
-                  className="text-xs text-red-600 hover:underline"
+                  className={`cursor-pointer rounded px-2 py-1 text-xs font-medium text-danger hover:bg-danger-soft ${adminFocusRing}`}
                 >
                   Remove Video
                 </button>
               </div>
 
               <div className="grid gap-3 sm:grid-cols-2">
-                <div>
-                  <label className="block text-[11px] font-semibold text-[#4c535b]">Video Title</label>
-                  <input
-                    type="text"
-                    required
-                    value={video.title || ""}
-                    onChange={(e) => updateVideo(idx, "title", e.target.value)}
-                    placeholder="e.g. Lead routing Flow configuration walkthrough"
-                    className="mt-1 w-full rounded border border-[#d4cdc0] px-2.5 py-1.5 text-xs"
-                  />
-                </div>
+                <AdminField label="Video Title">
+                  {({ id }) => (
+                    <input
+                      id={id}
+                      type="text"
+                      required
+                      value={video.title || ""}
+                      onChange={(e) => updateVideo(idx, "title", e.target.value)}
+                      placeholder="e.g. Lead routing Flow configuration walkthrough"
+                      className={adminInputCompactClass}
+                    />
+                  )}
+                </AdminField>
 
-                <div>
-                  <div className="flex items-center justify-between">
-                    <label className="block text-[11px] font-semibold text-[#4c535b]">YouTube URL</label>
-                    {video.youtubeUrl && (
-                      <span className={`text-[10px] font-semibold ${parsed.ok ? "text-green-700" : "text-amber-700"}`}>
-                        {parsed.ok ? `✓ Valid ID: ${parsed.id}` : `⚠ ${parsed.reason}`}
+                <AdminField
+                  label="YouTube URL"
+                  action={
+                    video.youtubeUrl ? (
+                      <span
+                        className={`inline-flex items-center gap-1 text-[11px] font-semibold ${
+                          parsed.ok ? "text-success" : "text-amber"
+                        }`}
+                      >
+                        {parsed.ok ? (
+                          <>
+                            <Check className="size-3" /> Valid ID: {parsed.id}
+                          </>
+                        ) : (
+                          <>
+                            <Alert className="size-3" /> {parsed.reason}
+                          </>
+                        )}
                       </span>
-                    )}
-                  </div>
-                  <input
-                    type="url"
-                    required
-                    value={video.youtubeUrl || ""}
-                    onChange={(e) => updateVideo(idx, "youtubeUrl", e.target.value)}
-                    placeholder="https://youtu.be/..."
-                    className="mt-1 w-full rounded border border-[#d4cdc0] px-2.5 py-1.5 text-xs"
-                  />
-                </div>
+                    ) : null
+                  }
+                >
+                  {({ id }) => (
+                    <input
+                      id={id}
+                      type="url"
+                      required
+                      value={video.youtubeUrl || ""}
+                      onChange={(e) => updateVideo(idx, "youtubeUrl", e.target.value)}
+                      placeholder="https://youtu.be/..."
+                      className={adminInputCompactClass}
+                    />
+                  )}
+                </AdminField>
 
-                <div>
-                  <label className="block text-[11px] font-semibold text-[#4c535b]">Aspect Ratio</label>
-                  <select
-                    value={video.aspectRatio || "16:9"}
-                    onChange={(e) => updateVideo(idx, "aspectRatio", e.target.value)}
-                    className="mt-1 w-full rounded border border-[#d4cdc0] px-2.5 py-1.5 text-xs"
-                  >
-                    <option value="16:9">16:9 (Landscape standard)</option>
-                    <option value="9:16">9:16 (Shorts / Vertical mobile)</option>
-                  </select>
-                </div>
+                <AdminField label="Aspect Ratio">
+                  {({ id }) => (
+                    <select
+                      id={id}
+                      value={video.aspectRatio || "16:9"}
+                      onChange={(e) => updateVideo(idx, "aspectRatio", e.target.value)}
+                      className={adminInputCompactClass}
+                    >
+                      <option value="16:9">16:9 (Landscape standard)</option>
+                      <option value="9:16">9:16 (Shorts / Vertical mobile)</option>
+                    </select>
+                  )}
+                </AdminField>
 
                 <div className="flex items-center gap-2 pt-5">
                   <input
@@ -485,172 +524,65 @@ export function ProjectForm({ initialData, isNew = false }: ProjectFormProps) {
                     id={`captions-${idx}`}
                     checked={Boolean(video.showCaptions)}
                     onChange={(e) => updateVideo(idx, "showCaptions", e.target.checked)}
-                    className="size-3.5 rounded text-[#0e5f5b]"
+                    className={`size-4 cursor-pointer rounded text-accent ${adminFocusRing}`}
                   />
-                  <label htmlFor={`captions-${idx}`} className="text-xs text-[#191c20]">
+                  <label htmlFor={`captions-${idx}`} className="cursor-pointer text-xs text-ink">
                     Enable captions by default
                   </label>
                 </div>
 
-                <div className="sm:col-span-2">
-                  <label className="block text-[11px] font-semibold text-[#4c535b]">
-                    Video Description (under player)
-                  </label>
-                  <input
-                    type="text"
-                    value={video.description || ""}
-                    onChange={(e) => updateVideo(idx, "description", e.target.value)}
-                    placeholder="Short note about what this video demonstrates"
-                    className="mt-1 w-full rounded border border-[#d4cdc0] px-2.5 py-1.5 text-xs"
-                  />
-                </div>
+                <AdminField label="Video Description (under player)" className="sm:col-span-2">
+                  {({ id }) => (
+                    <input
+                      id={id}
+                      type="text"
+                      value={video.description || ""}
+                      onChange={(e) => updateVideo(idx, "description", e.target.value)}
+                      placeholder="Short note about what this video demonstrates"
+                      className={adminInputCompactClass}
+                    />
+                  )}
+                </AdminField>
               </div>
             </div>
           );
         })}
-      </div>
+      </AdminCard>
 
-      {/* Technical Documentation Markdown Editor with Rich Toolbar */}
-      <div className="rounded-xl border border-[#e6e1d8] bg-white p-6 shadow-sm space-y-4">
-        <div className="flex items-center justify-between">
-          <h3 className="text-sm font-bold uppercase tracking-wider text-[#0e5f5b]">
-            5. Technical Article / Documentation (Markdown)
+      {/* Technical Documentation Markdown Editor */}
+      <AdminCard className="space-y-4">
+        <div>
+          <h3 className="text-sm font-bold uppercase tracking-[0.08em] text-accent">
+            5. Technical Article / Documentation
           </h3>
-          <button
-            type="button"
-            onClick={() => setPreviewDocs(!previewDocs)}
-            className="rounded px-2.5 py-1 text-xs font-semibold text-[#0e5f5b] hover:bg-[#e1eeec]"
-          >
-            {previewDocs ? "Edit Mode" : "Preview Mode"}
-          </button>
+          <p id="doc-editor-hint" className="mt-1 text-xs text-body">
+            Use the toolbar, templates, or drag-and-drop images. Headings (H2 / H3) automatically generate
+            the sticky Table of Contents on the live project page.
+          </p>
         </div>
 
-        {/* Markdown Toolbar */}
-        {!previewDocs && (
-          <div className="flex flex-wrap gap-1 rounded-lg border border-[#e6e1d8] bg-[#faf8f4] p-1.5 text-xs">
-            <button
-              type="button"
-              onClick={() => insertMarkdown("## ", "\n", "Heading 2 Title")}
-              className="rounded px-2 py-1 font-bold text-[#191c20] hover:bg-white border border-transparent hover:border-[#d4cdc0]"
-              title="Heading 2 (TOC Section)"
-            >
-              H2
-            </button>
-            <button
-              type="button"
-              onClick={() => insertMarkdown("### ", "\n", "Heading 3 Subtitle")}
-              className="rounded px-2 py-1 font-bold text-[#191c20] hover:bg-white border border-transparent hover:border-[#d4cdc0]"
-              title="Heading 3 (TOC Sub-item)"
-            >
-              H3
-            </button>
-            <span className="w-px bg-[#d4cdc0] my-0.5 mx-1" />
-            <button
-              type="button"
-              onClick={() => insertMarkdown("**", "**", "bold text")}
-              className="rounded px-2 py-1 font-bold text-[#191c20] hover:bg-white border border-transparent hover:border-[#d4cdc0]"
-              title="Bold"
-            >
-              B
-            </button>
-            <button
-              type="button"
-              onClick={() => insertMarkdown("*", "*", "italic text")}
-              className="rounded px-2 py-1 italic text-[#191c20] hover:bg-white border border-transparent hover:border-[#d4cdc0]"
-              title="Italic"
-            >
-              I
-            </button>
-            <button
-              type="button"
-              onClick={() => insertMarkdown("```\n", "\n```\n", "// Code block")}
-              className="rounded px-2 py-1 font-mono text-[#191c20] hover:bg-white border border-transparent hover:border-[#d4cdc0]"
-              title="Code Block"
-            >
-              &lt;/&gt;
-            </button>
-            <span className="w-px bg-[#d4cdc0] my-0.5 mx-1" />
-            <button
-              type="button"
-              onClick={() => insertMarkdown("- ", "\n", "List item")}
-              className="rounded px-2 py-1 text-[#191c20] hover:bg-white border border-transparent hover:border-[#d4cdc0]"
-              title="Bullet list"
-            >
-              • List
-            </button>
-            <button
-              type="button"
-              onClick={() => insertMarkdown("1. ", "\n", "First item")}
-              className="rounded px-2 py-1 text-[#191c20] hover:bg-white border border-transparent hover:border-[#d4cdc0]"
-              title="Numbered list"
-            >
-              1. List
-            </button>
-            <button
-              type="button"
-              onClick={() => insertMarkdown("> ", "\n", "Callout quote")}
-              className="rounded px-2 py-1 text-[#191c20] hover:bg-white border border-transparent hover:border-[#d4cdc0]"
-              title="Blockquote"
-            >
-              " Quote
-            </button>
-            <span className="w-px bg-[#d4cdc0] my-0.5 mx-1" />
-            <button
-              type="button"
-              onClick={() => insertMarkdown("[", "](https://example.com)", "Link text")}
-              className="rounded px-2 py-1 text-[#0e5f5b] font-medium hover:bg-white border border-transparent hover:border-[#d4cdc0]"
-              title="Hyperlink"
-            >
-              🔗 Link
-            </button>
-            <button
-              type="button"
-              onClick={() => insertMarkdown("![Image description](", ")", "/uploads/...")}
-              className="rounded px-2 py-1 text-[#0e5f5b] font-medium hover:bg-white border border-transparent hover:border-[#d4cdc0]"
-              title="Image from /uploads/"
-            >
-              🖼 Image
-            </button>
-          </div>
-        )}
-
-        <p className="text-xs text-[#646b73]">
-          Write your technical write-up using Markdown. Headings (## and ###) will automatically generate
-          the sticky Table of Contents on the live project page.
-        </p>
-
-        {previewDocs ? (
-          <div className="rounded-lg border border-[#e6e1d8] bg-[#faf8f4] p-5 font-sans prose prose-sm max-w-none">
-            <pre className="whitespace-pre-wrap font-sans text-xs leading-relaxed text-[#191c20]">
-              {form.documentationContent || "No documentation written yet."}
-            </pre>
-          </div>
-        ) : (
-          <textarea
-            id="documentation-editor"
-            rows={14}
-            value={form.documentationContent || ""}
-            onChange={(e) => setForm({ ...form, documentationContent: e.target.value })}
-            placeholder={`## Business problem\n\nExplain the problem...\n\n## Solution architecture\n\nExplain the Flow...\n\n## Testing & Verification\n\nHow it was tested...`}
-            className="w-full rounded-lg border border-[#d4cdc0] p-4 text-xs font-mono text-[#191c20] leading-relaxed focus:border-[#0e5f5b] focus:outline-none"
-          />
-        )}
-      </div>
+        <MarkdownEditor
+          id="documentation-editor"
+          variant="full"
+          rows={16}
+          value={form.documentationContent || ""}
+          onChange={(documentationContent) => setForm({ ...form, documentationContent })}
+          placeholder={`## Business problem\n\nExplain the problem...\n\n## Solution architecture\n\nExplain the Flow...\n\n## Testing & verification\n\nHow it was tested...`}
+          ariaLabel="Technical documentation Markdown editor"
+          ariaDescribedBy="doc-editor-hint"
+        />
+      </AdminCard>
 
       {/* Save Button */}
       <div className="flex justify-end gap-3">
         <button
           type="button"
           onClick={() => router.push("/admin/projects")}
-          className="rounded-lg border border-[#d4cdc0] px-5 py-2.5 text-xs font-semibold text-[#4c535b] hover:bg-[#f3efe8]"
+          className={adminSecondaryBtnClass}
         >
           Cancel
         </button>
-        <button
-          type="submit"
-          disabled={saving}
-          className="rounded-lg bg-[#0e5f5b] px-6 py-2.5 text-xs font-semibold text-white shadow-sm transition hover:bg-[#0a4744] disabled:opacity-50"
-        >
+        <button type="submit" disabled={saving} className={adminPrimaryBtnClass}>
           {saving ? "Saving..." : isNew ? "Publish Project" : "Save Changes"}
         </button>
       </div>

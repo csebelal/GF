@@ -1,7 +1,9 @@
 import type { Metadata, Viewport } from "next";
 import { Inter } from "next/font/google";
+import Script from "next/script";
 import { Footer } from "@/components/Footer";
 import { Header } from "@/components/Header";
+import { PublicOnly } from "@/components/PublicOnly";
 import { SiteEffects } from "@/components/SiteEffects";
 import { profile as staticProfile, site } from "@/content/site";
 import { getDbProfile } from "@/lib/db/repository";
@@ -59,25 +61,50 @@ export default async function RootLayout({ children }: { children: React.ReactNo
     url: profile.siteMeta?.url || site.url,
   };
 
+  const headerProfile = {
+    name: profile.name,
+    shortName: profile.shortName,
+    jobTitle: profile.jobTitle,
+    email: profile.email,
+    portrait: profile.portrait,
+    cv: profile.cv,
+    headerSettings: profile.headerSettings,
+  };
+
+  const footerProfile = {
+    name: profile.name,
+    employer: profile.employer,
+    location: profile.location,
+    email: profile.email,
+    linkedin: profile.linkedin,
+    cv: profile.cv,
+    footerSettings: profile.footerSettings,
+  };
+
   return (
-    <html lang="en" className={inter.variable} suppressHydrationWarning>
+    <html lang="en" className={inter.variable} data-scroll-behavior="smooth" suppressHydrationWarning>
       <head>
-        <script dangerouslySetInnerHTML={{ __html: revealScript }} />
-        <script
-          type="application/ld+json"
-          dangerouslySetInnerHTML={{ __html: JSON.stringify(personJsonLd) }}
-        />
+        <link rel="dns-prefetch" href="https://i.ytimg.com" />
       </head>
-      <body className="flex min-h-screen flex-col">
+      <body className="flex min-h-screen flex-col" suppressHydrationWarning>
+        <Script id="reveal-init" strategy="beforeInteractive">
+          {revealScript}
+        </Script>
         <a href="#main" className="skip-link">
           Skip to content
         </a>
-        <Header profile={profile} />
+        <Header profile={headerProfile} />
         <main id="main" tabIndex={-1} className="flex-1">
           {children}
         </main>
-        <Footer profile={profile} />
+        <PublicOnly>
+          <Footer profile={footerProfile} />
+        </PublicOnly>
         <SiteEffects />
+        <script
+          type="application/ld+json"
+          dangerouslySetInnerHTML={{ __html: JSON.stringify(personJsonLd).replace(/</g, "\\u003c") }}
+        />
       </body>
     </html>
   );

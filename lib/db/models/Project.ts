@@ -121,5 +121,7 @@ const ProjectSchema = new Schema<IProject>(
   { timestamps: true }
 );
 
+ProjectSchema.index({ status: 1, sortOrder: 1, createdAt: -1 });
+
 export const ProjectModel: Model<IProject> =
   mongoose.models.Project || mongoose.model<IProject>("Project", ProjectSchema);

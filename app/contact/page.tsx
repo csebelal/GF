@@ -4,6 +4,7 @@ import { CVDownload } from "@/components/CVDownload";
 import { ArrowRight, ArrowUpRight, Check, FileText, LinkedIn, Mail, MapPin } from "@/components/Icons";
 import { pageMetadata } from "@/lib/metadata";
 import { getDbProfile } from "@/lib/db/repository";
+import { safeHref } from "@/lib/security/sanitize";
 
 export const metadata = pageMetadata({
   title: "Contact",
@@ -41,7 +42,7 @@ export default async function ContactPage() {
   const linkedinCard = contact?.linkedinCard;
   const showLinkedin = linkedinCard?.show !== false;
   const linkedinTitle = linkedinCard?.label || "LinkedIn";
-  const linkedinUrl = linkedinCard?.customUrl || profile.linkedin.url;
+  const linkedinUrl = safeHref(linkedinCard?.customUrl || profile.linkedin.url, "https://www.linkedin.com");
   const linkedinLabel = linkedinCard?.displayText || linkedinCard?.customText || "Connect on LinkedIn";
 
   const locationCard = contact?.locationCard;
@@ -63,21 +64,21 @@ export default async function ContactPage() {
   const primaryBtn = bottomBanner?.primaryButton;
   const showPrimaryBtn = primaryBtn?.show !== false;
   const primaryBtnLabel = primaryBtn?.label || "Portfolio";
-  const primaryBtnUrl = primaryBtn?.url || "/portfolio";
+  const primaryBtnUrl = safeHref(primaryBtn?.url, "/portfolio");
   const secondaryBtn = bottomBanner?.secondaryButton;
   const showSecondaryBtn = secondaryBtn?.show !== false;
   const secondaryBtnLabel = secondaryBtn?.label || "Experience";
-  const secondaryBtnUrl = secondaryBtn?.url || "/experience";
+  const secondaryBtnUrl = safeHref(secondaryBtn?.url, "/experience");
 
   return (
     <>
       <section className="relative overflow-hidden">
         <div aria-hidden className="grid-lines absolute inset-0" />
-        <div aria-hidden className="absolute -left-40 top-20 size-[32rem] rounded-full bg-accent-soft/60 blur-3xl" />
+        <div aria-hidden className="pointer-events-none absolute -left-40 top-20 size-[32rem] rounded-full bg-[radial-gradient(circle,rgba(225,238,236,0.75)_0%,transparent_70%)]" />
         <div className="container-page relative grid gap-14 pb-24 pt-14 sm:pt-20 lg:grid-cols-12 lg:gap-16">
           <div className="lg:col-span-6">
             <p className="eyebrow animate-rise">{eyebrow}</p>
-            <h1 className="mt-6 animate-rise text-[clamp(2.5rem,5.4vw,4.1rem)] font-semibold leading-[1.04] tracking-[-0.035em] [animation-delay:60ms]">
+            <h1 className="mt-6 text-[clamp(2.5rem,5.4vw,4.1rem)] font-semibold leading-[1.04] tracking-[-0.035em]">
               {headline}
             </h1>
             <p className="mt-7 max-w-xl animate-rise text-lg leading-relaxed text-body sm:text-xl sm:leading-relaxed [animation-delay:120ms]">
@@ -124,7 +125,7 @@ export default async function ContactPage() {
                 href={linkedinUrl}
                 target="_blank"
                 rel="noopener noreferrer"
-                className="card group flex items-center gap-4 p-6 transition-shadow hover:shadow-lift animate-rise [animation-delay:180ms]"
+                className="card group flex items-center gap-4 p-6 transition-[box-shadow,border-color] duration-200 hover:border-line-strong hover:shadow-lift animate-rise [animation-delay:180ms]"
               >
                 <span className="flex size-12 shrink-0 items-center justify-center rounded-xl bg-accent-soft text-xl text-accent">
                   <LinkedIn />
@@ -170,7 +171,7 @@ export default async function ContactPage() {
       </section>
 
       {showBottomBanner && (
-        <section className="border-t border-line bg-tint py-16">
+        <section className="border-t border-line bg-tint py-16" data-reveal>
           <div className="container-page flex flex-col gap-6 sm:flex-row sm:items-center sm:justify-between">
             <p className="max-w-xl text-[1.0625rem] leading-relaxed text-body">
               {bannerBoldPrefix && <span className="font-semibold text-ink">{bannerBoldPrefix} </span>}

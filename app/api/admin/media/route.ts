@@ -1,10 +1,10 @@
 import { NextResponse } from "next/server";
-import { getAuthenticatedAdmin } from "@/lib/auth/session";
+import { getAuthenticatedAdminLean } from "@/lib/auth/session";
 import path from "node:path";
 import fs from "node:fs/promises";
 
 export async function GET() {
-  const admin = await getAuthenticatedAdmin();
+  const admin = await getAuthenticatedAdminLean();
   if (!admin) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }

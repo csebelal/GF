@@ -34,11 +34,20 @@ export function SiteEffects() {
           }
         }
       },
-      { rootMargin: "0px 0px -8% 0px", threshold: 0.08 },
+      { rootMargin: "0px 0px 80px 0px", threshold: 0.01 },
     );
 
     const frame = requestAnimationFrame(() => {
-      document.querySelectorAll("[data-reveal]:not(.is-visible)").forEach((el) => observer.observe(el));
+      const targets = document.querySelectorAll("[data-reveal]:not(.is-visible)");
+      const viewportLimit = window.innerHeight * 0.96;
+      targets.forEach((el) => {
+        // Reveal items already well inside the viewport immediately on navigation.
+        if (el.getBoundingClientRect().top <= viewportLimit) {
+          el.classList.add("is-visible");
+        } else {
+          observer.observe(el);
+        }
+      });
     });
     return () => {
       cancelAnimationFrame(frame);

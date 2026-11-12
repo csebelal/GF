@@ -1,9 +1,7 @@
-"use client";
-
 import Link from "next/link";
-import { usePathname } from "next/navigation";
 import { SHOW_SAMPLE_PROJECTS } from "@/content/projects";
 import { profile as staticProfile } from "@/content/site";
+import { safeHref } from "@/lib/security/sanitize";
 import { CVDownload } from "./CVDownload";
 import { ArrowUpRight, LinkedIn, Mail, MapPin } from "./Icons";
 
@@ -21,11 +19,6 @@ interface FooterProps {
 }
 
 export function Footer({ profile: customProfile }: FooterProps = {}) {
-  const pathname = usePathname();
-  if (pathname?.startsWith("/admin")) {
-    return null;
-  }
-
   const profile = customProfile ?? staticProfile;
   const footerSettings = profile?.footerSettings;
   const year = new Date().getFullYear();
@@ -85,7 +78,7 @@ export function Footer({ profile: customProfile }: FooterProps = {}) {
           <ul className="mt-4 grid grid-cols-2 gap-x-6 gap-y-1 lg:grid-cols-1">
             {links.map((link: any) => (
               <li key={link.href}>
-                <Link href={link.href} className="inline-flex min-h-10 items-center text-[0.9375rem] text-body hover:text-ink">
+                <Link href={safeHref(link.href, "/")} className="inline-flex min-h-10 items-center text-[0.9375rem] text-body hover:text-ink">
                   {link.label}
                 </Link>
               </li>
@@ -104,7 +97,7 @@ export function Footer({ profile: customProfile }: FooterProps = {}) {
               return (
                 <li key={idx}>
                   <a
-                    href={item.url}
+                    href={safeHref(item.url)}
                     target={isExternal ? "_blank" : undefined}
                     rel={isExternal ? "noopener noreferrer" : undefined}
                     className="inline-flex min-h-10 items-center gap-2.5 text-body hover:text-ink"
@@ -119,7 +112,7 @@ export function Footer({ profile: customProfile }: FooterProps = {}) {
                     {item.label}
                     {isExternal && !isMail ? (
                       <>
-                        <ArrowUpRight className="text-xs text-faint" />
+                        <ArrowUpRight className="text-xs text-muted" />
                         <span className="sr-only">(opens in a new tab)</span>
                       </>
                     ) : null}

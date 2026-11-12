@@ -1,25 +1,27 @@
 import { NextResponse } from "next/server";
 import { revalidatePath } from "next/cache";
-import { getAuthenticatedAdmin } from "@/lib/auth/session";
+import { getAuthenticatedAdminLean } from "@/lib/auth/session";
 import { connectDB } from "@/lib/db/connection";
 import { ExperienceModel } from "@/lib/db/models/Experience";
 import { invalidateRepositoryCache, getDbExperience } from "@/lib/db/repository";
 import { sanitizeNoSql } from "@/lib/security/sanitize";
 import { logSecurityEvent } from "@/lib/security/audit";
 
+const NO_STORE_HEADERS = { "Cache-Control": "private, no-store" };
+
 export async function GET() {
-  const admin = await getAuthenticatedAdmin();
+  const admin = await getAuthenticatedAdminLean();
   if (!admin) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
 
   const exp = await getDbExperience();
-  return NextResponse.json(exp);
+  return NextResponse.json(exp, { headers: NO_STORE_HEADERS });
 }
 
 export async function PUT(request: Request) {
   try {
-    const admin = await getAuthenticatedAdmin();
+    const admin = await getAuthenticatedAdminLean();
     if (!admin) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
@@ -38,7 +40,7 @@ export async function PUT(request: Request) {
     const data = sanitizeNoSql(rawData);
     await connectDB();
 
-    const existing = await ExperienceModel.findOne({});
+    const existing = await ExperienceModel.findOne({}).select("_id").lean();
     let updated;
 
     if (existing) {
@@ -49,7 +51,7 @@ export async function PUT(request: Request) {
           new: true,
           runValidators: true,
         }
-      );
+      ).lean();
     } else {
       updated = await ExperienceModel.create(data);
     }

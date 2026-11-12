@@ -109,15 +109,20 @@ export function validateUploadedFile(
     return { valid: false, error: `File type "${ext}" is not permitted for security reasons.` };
   }
 
-  // 3. Find matching allowed config
-  const matchedType = ALLOWED_TYPES.find(
-    (t) => t.extensions.includes(ext) || t.mime === file.type
-  );
+  // 3. Require an explicitly whitelisted extension (never trust MIME type alone)
+  const matchedType = ALLOWED_TYPES.find((t) => t.extensions.includes(ext));
 
   if (!matchedType) {
     return {
       valid: false,
       error: `Unsupported file format (${ext}). Only JPG, PNG, WebP images and PDF documents are allowed.`,
+    };
+  }
+
+  if (file.type && file.type !== "application/octet-stream" && file.type !== matchedType.mime) {
+    return {
+      valid: false,
+      error: `Declared MIME type (${file.type}) does not match file extension (${ext}).`,
     };
   }
 

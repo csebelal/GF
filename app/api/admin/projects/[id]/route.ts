@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 import { revalidatePath } from "next/cache";
-import { getAuthenticatedAdmin } from "@/lib/auth/session";
+import { getAuthenticatedAdminLean } from "@/lib/auth/session";
 import { connectDB } from "@/lib/db/connection";
 import { ProjectModel } from "@/lib/db/models/Project";
 import { invalidateRepositoryCache } from "@/lib/db/repository";
@@ -11,6 +11,7 @@ import mongoose from "mongoose";
 type RouteProps = { params: Promise<{ id: string }> };
 
 const SLUG_PATTERN = /^[a-z0-9]+(?:-[a-z0-9]+)*$/;
+const NO_STORE_HEADERS = { "Cache-Control": "private, no-store" };
 
 function validateIdParam(id: string): { valid: boolean; isObjectId: boolean; cleanedId: string } {
   if (typeof id !== "string") return { valid: false, isObjectId: false, cleanedId: "" };
@@ -25,7 +26,7 @@ function validateIdParam(id: string): { valid: boolean; isObjectId: boolean; cle
 }
 
 export async function GET(request: Request, { params }: RouteProps) {
-  const admin = await getAuthenticatedAdmin();
+  const admin = await getAuthenticatedAdminLean();
   if (!admin) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
@@ -49,12 +50,12 @@ export async function GET(request: Request, { params }: RouteProps) {
     return NextResponse.json({ error: "Project not found" }, { status: 404 });
   }
 
-  return NextResponse.json(project);
+  return NextResponse.json(project, { headers: NO_STORE_HEADERS });
 }
 
 export async function PUT(request: Request, { params }: RouteProps) {
   try {
-    const admin = await getAuthenticatedAdmin();
+    const admin = await getAuthenticatedAdminLean();
     if (!admin) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
@@ -79,10 +80,10 @@ export async function PUT(request: Request, { params }: RouteProps) {
     const data = filterProjectPayload(rawData);
     await connectDB();
 
-    // Locate existing document
+    // Locate existing document (minimal projection)
     const existing = parsed.isObjectId
-      ? await ProjectModel.findById(parsed.cleanedId)
-      : await ProjectModel.findOne({ slug: parsed.cleanedId });
+      ? await ProjectModel.findById(parsed.cleanedId).select("_id slug").lean()
+      : await ProjectModel.findOne({ slug: parsed.cleanedId }).select("_id slug").lean();
 
     if (!existing) {
       return NextResponse.json({ error: "Project not found" }, { status: 404 });
@@ -102,7 +103,9 @@ export async function PUT(request: Request, { params }: RouteProps) {
         const existingWithSlug = await ProjectModel.findOne({
           slug: cleanSlug,
           _id: { $ne: existing._id },
-        });
+        })
+          .select("_id")
+          .lean();
         if (existingWithSlug) {
           return NextResponse.json({ error: `Slug "${cleanSlug}" is already taken.` }, { status: 400 });
         }
@@ -118,7 +121,7 @@ export async function PUT(request: Request, { params }: RouteProps) {
         new: true,
         runValidators: true,
       }
-    );
+    ).lean();
 
     if (!updated) {
       return NextResponse.json({ error: "Project not found" }, { status: 404 });
@@ -152,7 +155,7 @@ export async function PUT(request: Request, { params }: RouteProps) {
 
 export async function DELETE(request: Request, { params }: RouteProps) {
   try {
-    const admin = await getAuthenticatedAdmin();
+    const admin = await getAuthenticatedAdminLean();
     if (!admin) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
@@ -166,8 +169,8 @@ export async function DELETE(request: Request, { params }: RouteProps) {
     await connectDB();
 
     const deleted = parsed.isObjectId
-      ? await ProjectModel.findByIdAndDelete(parsed.cleanedId)
-      : await ProjectModel.findOneAndDelete({ slug: parsed.cleanedId });
+      ? await ProjectModel.findByIdAndDelete(parsed.cleanedId).select("_id slug").lean()
+      : await ProjectModel.findOneAndDelete({ slug: parsed.cleanedId }).select("_id slug").lean();
 
     if (!deleted) {
       return NextResponse.json({ error: "Project not found" }, { status: 404 });

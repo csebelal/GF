@@ -1,25 +1,27 @@
 import { NextResponse } from "next/server";
 import { revalidatePath } from "next/cache";
-import { getAuthenticatedAdmin } from "@/lib/auth/session";
+import { getAuthenticatedAdminLean } from "@/lib/auth/session";
 import { connectDB } from "@/lib/db/connection";
 import { ExpertiseModel } from "@/lib/db/models/Expertise";
 import { invalidateRepositoryCache, getDbExpertise } from "@/lib/db/repository";
 import { sanitizeNoSql } from "@/lib/security/sanitize";
 import { logSecurityEvent } from "@/lib/security/audit";
 
+const NO_STORE_HEADERS = { "Cache-Control": "private, no-store" };
+
 export async function GET() {
-  const admin = await getAuthenticatedAdmin();
+  const admin = await getAuthenticatedAdminLean();
   if (!admin) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
 
   const expertise = await getDbExpertise();
-  return NextResponse.json(expertise);
+  return NextResponse.json(expertise, { headers: NO_STORE_HEADERS });
 }
 
 export async function PUT(request: Request) {
   try {
-    const admin = await getAuthenticatedAdmin();
+    const admin = await getAuthenticatedAdminLean();
     if (!admin) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
@@ -38,7 +40,7 @@ export async function PUT(request: Request) {
     const data = sanitizeNoSql(rawData);
     await connectDB();
 
-    const existing = await ExpertiseModel.findOne({});
+    const existing = await ExpertiseModel.findOne({}).select("_id").lean();
     let updated;
 
     if (existing) {
@@ -49,7 +51,7 @@ export async function PUT(request: Request) {
           new: true,
           runValidators: true,
         }
-      );
+      ).lean();
     } else {
       updated = await ExpertiseModel.create(data);
     }

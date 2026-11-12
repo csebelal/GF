@@ -23,15 +23,37 @@ export interface LoadedDoc {
   idPrefix: string;
 }
 
+const IS_PROD = process.env.NODE_ENV === "production";
+const docExistsCache = new Map<string, boolean>();
+const docContentCache = new Map<string, string>();
+const MAX_DOC_CACHE = 100;
+
 export function docExists(relativePath: string): boolean {
   const resolved = path.resolve(DOCS_DIR, relativePath);
-  return resolved.startsWith(DOCS_DIR + path.sep) && fs.existsSync(resolved);
+  if (!resolved.startsWith(DOCS_DIR + path.sep)) return false;
+  if (IS_PROD) {
+    const cached = docExistsCache.get(resolved);
+    if (cached !== undefined) return cached;
+    const exists = fs.existsSync(resolved);
+    if (docExistsCache.size > MAX_DOC_CACHE) docExistsCache.clear();
+    docExistsCache.set(resolved, exists);
+    return exists;
+  }
+  return fs.existsSync(resolved);
 }
 
 export function readDoc(relativePath: string): string {
   const resolved = path.resolve(DOCS_DIR, relativePath);
   if (!resolved.startsWith(DOCS_DIR + path.sep)) {
     throw new Error(`Documentation path escapes content/docs: ${relativePath}`);
+  }
+  if (IS_PROD) {
+    const cached = docContentCache.get(resolved);
+    if (cached !== undefined) return cached;
+    const content = fs.readFileSync(resolved, "utf8");
+    if (docContentCache.size > MAX_DOC_CACHE) docContentCache.clear();
+    docContentCache.set(resolved, content);
+    return content;
   }
   return fs.readFileSync(resolved, "utf8");
 }
@@ -42,13 +64,20 @@ interface MdNode {
   children?: MdNode[];
 }
 
+const mdParser = unified().use(remarkParse).use(remarkGfm);
+const headingsCache = new Map<string, DocHeading[]>();
+
 /**
  * Extracts headings with the same slug algorithm as rehype-slug
  * (github-slugger, one slugger per document, every heading counted) so the
  * table of contents always matches the rendered IDs.
  */
 export function extractHeadings(markdown: string, idPrefix = ""): DocHeading[] {
-  const tree = unified().use(remarkParse).use(remarkGfm).parse(markdown) as MdNode;
+  const cacheKey = `${idPrefix}\0${markdown}`;
+  const cached = headingsCache.get(cacheKey);
+  if (cached) return cached;
+
+  const tree = mdParser.parse(markdown) as MdNode;
   const slugger = new GithubSlugger();
   const headings: DocHeading[] = [];
 
@@ -63,6 +92,9 @@ export function extractHeadings(markdown: string, idPrefix = ""): DocHeading[] {
     node.children?.forEach(walk);
   };
   walk(tree);
+
+  if (headingsCache.size > 100) headingsCache.clear();
+  headingsCache.set(cacheKey, headings);
   return headings;
 }
 

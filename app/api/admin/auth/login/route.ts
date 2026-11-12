@@ -5,6 +5,9 @@ import { verifyPassword, createSessionToken, SESSION_COOKIE_NAME } from "@/lib/a
 import { RateLimiters, resetRateLimit } from "@/lib/security/rate-limit";
 import { extractClientIp, logSecurityEvent } from "@/lib/security/audit";
 
+// Precomputed dummy bcrypt hash ($2b$12$) used when user is not found to mitigate timing enumeration
+const DUMMY_BCRYPT_HASH = "$2b$12$C6UzMDM.H6dfI/f/IKcEeO7H0oJ8tM1iQe5Q1yG3mM6yS8wN9qK6e";
+
 export async function POST(request: Request) {
   const ip = extractClientIp(request.headers);
 
@@ -53,10 +56,30 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: "Invalid email or password." }, { status: 401 });
     }
 
+    // Enforce per-account rate limit (defense against X-Forwarded-For rotation)
+    const emailRateLimit = RateLimiters.authLoginEmail(email, request);
+    if (!emailRateLimit.success) {
+      const retryAfter = emailRateLimit.retryAfterSeconds || 60;
+      return NextResponse.json(
+        {
+          error: `Too many failed login attempts. Account temporarily locked out. Please try again in ${Math.ceil(retryAfter / 60)} minutes.`,
+        },
+        {
+          status: 429,
+          headers: {
+            "Retry-After": retryAfter.toString(),
+            "X-RateLimit-Limit": emailRateLimit.limit.toString(),
+            "X-RateLimit-Remaining": "0",
+          },
+        }
+      );
+    }
+
     await connectDB();
     const admin = await AdminModel.findOne({ email });
 
     if (!admin) {
+      await verifyPassword(password, DUMMY_BCRYPT_HASH);
       logSecurityEvent("AUTH_LOGIN_FAILED", {
         req: request,
         user: email,
@@ -77,8 +100,9 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: "Invalid email or password." }, { status: 401 });
     }
 
-    // Successful authentication: reset rate limiter for this IP
+    // Successful authentication: reset rate limiters for this IP and email
     resetRateLimit(`login:${ip}`);
+    resetRateLimit(`login_email:${email}`);
 
     // Update last login
     admin.lastLogin = new Date();

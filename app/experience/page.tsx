@@ -17,6 +17,22 @@ export const metadata = pageMetadata({
 export default async function ExperiencePage() {
   const exp = await getDbExperience();
   const { employers, certifications, courseCertificates, awards, education, languages, volunteering } = exp;
+
+  const currentEmployer = employers[0];
+  const currentRole = currentEmployer?.roles[0];
+  const salesforceEmployer =
+    employers.find((emp) =>
+      emp.roles.some((r) => r.title.toLowerCase().includes("salesforce"))
+    ) || currentEmployer;
+  const earliestSalesforceRole = salesforceEmployer?.roles[salesforceEmployer.roles.length - 1];
+  const primaryCert = certifications[0];
+  const courseIssuer = courseCertificates[0]?.issuer;
+  const courseSummary =
+    courseCertificates.length > 0
+      ? `Plus ${courseCertificates.length}${courseIssuer ? ` ${courseIssuer}` : ""} course${courseCertificates.length === 1 ? "" : "s"}`
+      : certifications.length > 1
+        ? `Plus ${certifications.length - 1} additional credential${certifications.length - 1 === 1 ? "" : "s"}`
+        : "Sales Cloud & CRM operations";
   return (
     <>
       <PageHeader
@@ -43,18 +59,32 @@ export default async function ExperiencePage() {
         <dl className="container-page grid divide-y divide-line sm:grid-cols-3 sm:divide-x sm:divide-y-0">
           <div className="py-6 sm:pr-8">
             <dt className="text-xs font-semibold uppercase tracking-[0.12em] text-muted">Current role</dt>
-            <dd className="mt-2 font-semibold text-ink">Salesforce Administrator, Field Nation</dd>
-            <dd className="text-sm text-muted">January 2025 – present</dd>
+            <dd className="mt-2 font-semibold text-ink">
+              {currentRole && currentEmployer
+                ? `${currentRole.title}, ${currentEmployer.company}`
+                : "Salesforce Administrator, Field Nation"}
+            </dd>
+            <dd className="text-sm text-muted">
+              {currentRole
+                ? `${formatMonth(currentRole.start, "long")} – ${currentRole.end === "present" ? "present" : formatMonth(currentRole.end, "long")}`
+                : "January 2025 – present"}
+            </dd>
           </div>
           <div className="py-6 sm:px-8">
             <dt className="text-xs font-semibold uppercase tracking-[0.12em] text-muted">Salesforce experience</dt>
-            <dd className="mt-2 font-semibold text-ink">Since April 2022</dd>
+            <dd className="mt-2 font-semibold text-ink">
+              {earliestSalesforceRole
+                ? `Since ${formatMonth(earliestSalesforceRole.start, "long")}`
+                : "Since April 2022"}
+            </dd>
             <dd className="text-sm text-muted">Sales Cloud and Service Cloud</dd>
           </div>
           <div className="py-6 sm:pl-8">
             <dt className="text-xs font-semibold uppercase tracking-[0.12em] text-muted">Certification</dt>
-            <dd className="mt-2 font-semibold text-ink">Certified 6sense Administrator</dd>
-            <dd className="text-sm text-muted">Plus three Anthropic Academy courses</dd>
+            <dd className="mt-2 font-semibold text-ink">
+              {primaryCert?.name || "Certified 6sense Administrator"}
+            </dd>
+            <dd className="text-sm text-muted">{courseSummary}</dd>
           </div>
         </dl>
       </section>

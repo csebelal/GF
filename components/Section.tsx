@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { ArrowRight, Info } from "./Icons";
+import { ArrowRight } from "./Icons";
 
 /** Shared page-level building blocks. */
 
@@ -81,29 +81,5 @@ export function PageHeader({
         {children ? <div className="mt-8 animate-rise [animation-delay:180ms]">{children}</div> : null}
       </div>
     </section>
-  );
-}
-
-export function SampleNotice({ compact = false }: { compact?: boolean }) {
-  return (
-    <div
-      role="note"
-      className={`flex gap-3 rounded-xl border border-amber-line bg-amber-soft text-amber ${compact ? "px-4 py-3 text-sm" : "px-5 py-4 text-[0.9375rem]"}`}
-    >
-      <Info className="mt-0.5 shrink-0 text-lg" />
-      <p className="leading-relaxed">
-        <strong className="font-semibold">Sample project.</strong> This entry is placeholder content that shows how
-        a portfolio project is presented. It does not describe work Afrin has completed and will be replaced with
-        her own projects.
-      </p>
-    </div>
-  );
-}
-
-export function SampleCollectionNote() {
-  return (
-    <p className="inline-flex items-center gap-2 rounded-full border border-amber-line bg-amber-soft px-3 py-1.5 text-sm font-medium text-amber">
-      <Info className="shrink-0" /> Sample collection — placeholder projects that demonstrate the layout
-    </p>
   );
 }

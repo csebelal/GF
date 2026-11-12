@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useId, useMemo, useState } from "react";
+import { useCallback, useDeferredValue, useEffect, useId, useMemo, useRef, useState } from "react";
 import { contentTypeLabels } from "@/lib/project-utils";
 import type { ProjectCardData } from "@/lib/projects";
 import type { ContentType } from "@/lib/types";
@@ -32,10 +32,12 @@ function readStateFromUrl(categories: string[]): FilterState {
   };
 }
 
-function matchesQuery(project: ProjectCardData, query: string) {
-  const terms = query.toLowerCase().split(/\s+/).filter(Boolean);
+function parseSearchTerms(query: string): string[] {
+  return query.toLowerCase().split(/\s+/).filter(Boolean);
+}
+
+function matchesTerms(haystack: string, terms: string[]) {
   if (terms.length === 0) return true;
-  const haystack = [project.title, project.summary, project.category, ...project.tools].join(" ").toLowerCase();
   return terms.every((term) => haystack.includes(term));
 }
 
@@ -48,6 +50,16 @@ export function PortfolioFilters({ projects, categories }: PortfolioFiltersProps
   const searchId = useId();
   const statusId = useId();
 
+  // Pre-compute lowercased search haystacks once per projects array.
+  const searchable = useMemo(
+    () =>
+      projects.map((project) => ({
+        project,
+        haystack: [project.title, project.summary, project.category, ...project.tools].join(" ").toLowerCase(),
+      })),
+    [projects],
+  );
+
   // Hydrate from the URL after mount (keeps the static HTML complete) and on back/forward.
   useEffect(() => {
     const sync = () => setState(readStateFromUrl(categories));
@@ -56,9 +68,11 @@ export function PortfolioFilters({ projects, categories }: PortfolioFiltersProps
     return () => window.removeEventListener("popstate", sync);
   }, [categories]);
 
-  const update = useCallback((patch: Partial<FilterState>) => {
-    setState((previous) => {
-      const next = { ...previous, ...patch };
+  const urlTimerRef = useRef<ReturnType<typeof setTimeout>>(undefined);
+  useEffect(() => () => clearTimeout(urlTimerRef.current), []);
+
+  const syncUrl = useCallback((next: FilterState, immediate: boolean) => {
+    const writeUrl = () => {
       const params = new URLSearchParams();
       if (next.query) params.set("q", next.query);
       if (next.category) params.set("category", next.category);
@@ -66,39 +80,71 @@ export function PortfolioFilters({ projects, categories }: PortfolioFiltersProps
       const search = params.toString();
       const url = `${window.location.pathname}${search ? `?${search}` : ""}`;
       window.history.replaceState(window.history.state, "", url);
-      return next;
-    });
+    };
+    clearTimeout(urlTimerRef.current);
+    if (immediate) {
+      writeUrl();
+    } else {
+      urlTimerRef.current = setTimeout(writeUrl, 150);
+    }
   }, []);
+
+  const update = useCallback(
+    (patch: Partial<FilterState>) => {
+      const immediate = patch.query === undefined || patch.query === "";
+      setState((previous) => {
+        const next = { ...previous, ...patch };
+        syncUrl(next, immediate);
+        return next;
+      });
+    },
+    [syncUrl],
+  );
 
   const types = useMemo(
     () => TYPE_ORDER.filter((type) => projects.some((project) => project.contentType === type)),
     [projects],
   );
 
+  const deferredQuery = useDeferredValue(state.query);
+  const terms = useMemo(() => parseSearchTerms(deferredQuery), [deferredQuery]);
+
   const results = useMemo(
     () =>
-      projects.filter(
-        (project) =>
-          matchesQuery(project, state.query) &&
-          (!state.category || project.category === state.category) &&
-          (!state.type || project.contentType === state.type),
-      ),
-    [projects, state],
+      searchable
+        .filter(
+          ({ project, haystack }) =>
+            matchesTerms(haystack, terms) &&
+            (!state.category || project.category === state.category) &&
+            (!state.type || project.contentType === state.type),
+        )
+        .map(({ project }) => project),
+    [searchable, terms, state.category, state.type],
   );
+
+  const typeCounts = useMemo(() => {
+    const counts: Partial<Record<ContentType, number>> = {};
+    for (const { project, haystack } of searchable) {
+      if (matchesTerms(haystack, terms) && (!state.category || project.category === state.category)) {
+        counts[project.contentType] = (counts[project.contentType] ?? 0) + 1;
+      }
+    }
+    return counts;
+  }, [searchable, terms, state.category]);
+
+  const categoryCounts = useMemo(() => {
+    const counts: Record<string, number> = {};
+    for (const { project, haystack } of searchable) {
+      if (matchesTerms(haystack, terms) && (!state.type || project.contentType === state.type)) {
+        counts[project.category] = (counts[project.category] ?? 0) + 1;
+      }
+    }
+    return counts;
+  }, [searchable, terms, state.type]);
 
   const isFiltered = Boolean(state.query || state.category || state.type);
   const featured = !isFiltered ? results.filter((project) => project.featured) : [];
   const rest = !isFiltered ? results.filter((project) => !project.featured) : results;
-
-  const countFor = (patch: Partial<FilterState>) =>
-    projects.filter((project) => {
-      const s = { ...state, ...patch };
-      return (
-        matchesQuery(project, s.query) &&
-        (!s.category || project.category === s.category) &&
-        (!s.type || project.contentType === s.type)
-      );
-    }).length;
 
   return (
     <div>
@@ -141,7 +187,7 @@ export function PortfolioFilters({ projects, categories }: PortfolioFiltersProps
                   key={type}
                   active={state.type === type}
                   onClick={() => update({ type: state.type === type ? "" : type })}
-                  count={countFor({ type })}
+                  count={typeCounts[type] ?? 0}
                 >
                   {contentTypeLabels[type]}
                 </FilterButton>
@@ -160,7 +206,7 @@ export function PortfolioFilters({ projects, categories }: PortfolioFiltersProps
                 key={category}
                 active={state.category === category}
                 onClick={() => update({ category: state.category === category ? "" : category })}
-                count={countFor({ category })}
+                count={categoryCounts[category] ?? 0}
               >
                 {category}
               </FilterButton>
@@ -272,7 +318,7 @@ function FilterButton({
       type="button"
       aria-pressed={active}
       onClick={onClick}
-      className={`inline-flex min-h-10 items-center gap-2 rounded-full border px-3.5 text-sm font-medium transition-colors ${
+      className={`inline-flex min-h-10 cursor-pointer items-center gap-2 rounded-full border px-3.5 text-sm font-medium transition-colors ${
         active
           ? "border-ink bg-ink text-white"
           : "border-line bg-surface text-body hover:border-line-strong hover:text-ink"
@@ -280,7 +326,7 @@ function FilterButton({
     >
       {children}
       {count !== undefined ? (
-        <span className={`text-xs tabular-nums ${active ? "text-white/75" : "text-muted"}`}>{count}</span>
+        <span className={`text-xs tabular-nums ${active ? "text-white/90" : "text-muted"}`}>{count}</span>
       ) : null}
     </button>
   );

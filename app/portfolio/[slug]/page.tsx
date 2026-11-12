@@ -1,18 +1,20 @@
 import type { Metadata } from "next";
+import Image from "next/image";
 import Link from "next/link";
 import { notFound } from "next/navigation";
-import { ContentTypeBadge, ProvenanceBadge, SampleBadge } from "@/components/Badges";
+import { ContentTypeBadge, ProvenanceBadge } from "@/components/Badges";
 import { DocumentationRenderer } from "@/components/DocumentationRenderer";
 import { ArrowLeft, ArrowRight, ArrowUpRight, Download, FileText, LinkIcon, Mail } from "@/components/Icons";
 import { ProjectCard } from "@/components/ProjectCard";
 import { ProjectMetadata } from "@/components/ProjectMetadata";
 import { ReadingProgress } from "@/components/ReadingProgress";
-import { SampleNotice } from "@/components/Section";
 import { TableOfContents, type TocItem } from "@/components/TableOfContents";
 import { YouTubeEmbed } from "@/components/YouTubeEmbed";
 import { profile } from "@/content/site";
+import { shouldUnoptimizeImage } from "@/lib/image-utils";
 import type { LoadedDoc } from "@/lib/markdown";
 import { pageMetadata } from "@/lib/metadata";
+import { safeHref } from "@/lib/security/sanitize";
 import {
   getDbProjectBySlug,
   getDbProjectDocs,
@@ -54,13 +56,13 @@ function docToc(doc: LoadedDoc | undefined): TocItem[] {
 
 export default async function ProjectPage({ params }: PageProps) {
   const { slug } = await params;
-  const project = await getDbProjectBySlug(slug);
-  if (!project || project.status !== "published") notFound();
-
   const published = await getPublishedDbProjects();
   const currentIndex = published.findIndex((p) => p.slug === slug);
+  if (currentIndex === -1) notFound();
+
+  const project = published[currentIndex];
   const previous = currentIndex > 0 ? published[currentIndex - 1] : undefined;
-  const next = currentIndex >= 0 && currentIndex < published.length - 1 ? published[currentIndex + 1] : undefined;
+  const next = currentIndex < published.length - 1 ? published[currentIndex + 1] : undefined;
 
   const related = published
     .filter((p) => p.slug !== slug && (p.category === project.category || p.tools.some((t) => project.tools.includes(t))))
@@ -124,7 +126,6 @@ export default async function ProjectPage({ params }: PageProps) {
           <div className="grid gap-10 pb-12 pt-10 lg:grid-cols-12 lg:gap-12 lg:pb-14">
             <div className="lg:col-span-8">
               <div className="flex flex-wrap gap-2">
-                {project.isSample ? <SampleBadge /> : null}
                 <ProvenanceBadge provenance={project.provenance} />
                 <ContentTypeBadge type={project.contentType} />
               </div>
@@ -135,11 +136,6 @@ export default async function ProjectPage({ params }: PageProps) {
               <p className="mt-6 max-w-2xl text-lg leading-relaxed text-body sm:text-xl sm:leading-relaxed">
                 {project.summary}
               </p>
-              {project.isSample ? (
-                <div className="mt-8 max-w-2xl">
-                  <SampleNotice />
-                </div>
-              ) : null}
             </div>
             <aside aria-label="Project details" className="lg:col-span-4">
               <ProjectMetadata project={project} />
@@ -164,11 +160,15 @@ export default async function ProjectPage({ params }: PageProps) {
       ) : project.coverImage ? (
         <div className="container-page">
           <figure className="mx-auto max-w-[66rem]">
-            <img
+            <Image
               src={project.coverImage.src}
               alt={project.coverImage.alt}
+              width={1200}
+              height={750}
+              sizes="(min-width: 1024px) 66rem, 100vw"
+              priority
+              unoptimized={shouldUnoptimizeImage(project.coverImage.src)}
               className="aspect-[16/10] w-full rounded-[var(--radius-card)] border border-line bg-surface object-cover shadow-lift"
-              fetchPriority="high"
             />
             {project.coverImage.caption ? (
               <figcaption className="mt-3 text-sm text-muted">{project.coverImage.caption}</figcaption>
@@ -285,13 +285,15 @@ export default async function ProjectPage({ params }: PageProps) {
                 <div className={`mt-8 grid gap-8 ${project.screenshots.length > 1 && !hasLongForm ? "sm:grid-cols-2" : ""}`}>
                   {project.screenshots.map((shot) => (
                     <figure key={shot.src + shot.alt}>
-                      <a href={shot.src} target="_blank" rel="noopener noreferrer" className="group block" aria-label={`Open full-size image: ${shot.alt} (new tab)`}>
-                        <img
+                      <a href={safeHref(shot.src)} target="_blank" rel="noopener noreferrer" className="group block" aria-label={`Open full-size image: ${shot.alt} (new tab)`}>
+                        <Image
                           src={shot.src}
                           alt={shot.alt}
-                          loading="lazy"
-                          decoding="async"
-                          className="w-full rounded-[0.875rem] border border-line bg-surface transition-shadow group-hover:shadow-lift"
+                          width={1200}
+                          height={750}
+                          sizes="(min-width: 1024px) 52rem, 100vw"
+                          unoptimized={shouldUnoptimizeImage(shot.src)}
+                          className="h-auto w-full rounded-[0.875rem] border border-line bg-surface transition-shadow group-hover:shadow-lift"
                         />
                       </a>
                       {shot.caption ? <figcaption className="mt-3 text-sm leading-relaxed text-muted">{shot.caption}</figcaption> : null}
@@ -310,7 +312,7 @@ export default async function ProjectPage({ params }: PageProps) {
                   {project.attachments?.map((file) => (
                     <li key={file.url}>
                       <a
-                        href={file.url}
+                        href={safeHref(file.url)}
                         download
                         className="card group flex items-center gap-4 p-4 transition-shadow hover:shadow-lift"
                       >
@@ -328,7 +330,7 @@ export default async function ProjectPage({ params }: PageProps) {
                   {project.externalLinks?.map((link) => (
                     <li key={link.url}>
                       <a
-                        href={link.url}
+                        href={safeHref(link.url)}
                         target="_blank"
                         rel="noopener noreferrer"
                         className="card group flex items-center gap-4 p-4 transition-shadow hover:shadow-lift"
@@ -364,7 +366,7 @@ export default async function ProjectPage({ params }: PageProps) {
 
       {/* Related ---------------------------------------------------------- */}
       {related.length > 0 ? (
-        <section aria-labelledby="related-title" className="border-t border-line bg-tint py-20">
+        <section aria-labelledby="related-title" className="border-t border-line bg-tint py-20" data-reveal>
           <div className="container-page">
             <div className="flex flex-wrap items-end justify-between gap-4">
               <h2 id="related-title" className="text-2xl font-semibold tracking-tight sm:text-3xl">
@@ -374,7 +376,7 @@ export default async function ProjectPage({ params }: PageProps) {
                 All projects <ArrowRight />
               </Link>
             </div>
-            <ul className="mt-10 grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
+            <ul className="mt-10 grid gap-6 sm:grid-cols-2 lg:grid-cols-3" data-reveal="stagger">
               {related.map((item) => (
                 <li key={item.slug}>
                   <ProjectCard project={item} variant="compact" />
@@ -386,7 +388,7 @@ export default async function ProjectPage({ params }: PageProps) {
       ) : null}
 
       {/* Contact ---------------------------------------------------------- */}
-      <section aria-labelledby="project-contact" className="py-20">
+      <section aria-labelledby="project-contact" className="py-20" data-reveal>
         <div className="container-page">
           <div className="card flex flex-col gap-6 p-8 sm:p-10 md:flex-row md:items-center md:justify-between">
             <div className="max-w-xl">
@@ -454,9 +456,9 @@ function AdjacentLink({ project, direction }: { project: ResolvedProject; direct
       className={`group flex flex-col gap-2 py-8 sm:py-10 ${isNext ? "border-t border-line sm:items-end sm:border-l sm:border-t-0 sm:pl-10 sm:text-right" : "sm:pr-10"}`}
     >
       <span className="inline-flex items-center gap-2 text-sm font-medium text-muted">
-        {isNext ? null : <ArrowLeft className="transition-transform group-hover:-translate-x-1" />}
+        {isNext ? null : <ArrowLeft className="transition-transform motion-safe:group-hover:-translate-x-1" />}
         {isNext ? "Next project" : "Previous project"}
-        {isNext ? <ArrowRight className="transition-transform group-hover:translate-x-1" /> : null}
+        {isNext ? <ArrowRight className="transition-transform motion-safe:group-hover:translate-x-1" /> : null}
       </span>
       <span className="text-lg font-semibold tracking-tight text-ink group-hover:text-accent sm:text-xl">{project.title}</span>
       <span className="text-sm text-muted">{project.category}</span>

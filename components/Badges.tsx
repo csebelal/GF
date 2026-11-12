@@ -25,10 +25,6 @@ export function ProvenanceBadge({ provenance }: { provenance: Provenance }) {
   );
 }
 
-export function SampleBadge() {
-  return <span className="chip border-amber-line bg-amber-soft font-semibold text-amber">Sample</span>;
-}
-
 export function ToolList({ tools, limit, className = "" }: { tools: string[]; limit?: number; className?: string }) {
   const visible = limit ? tools.slice(0, limit) : tools;
   const hidden = tools.length - visible.length;

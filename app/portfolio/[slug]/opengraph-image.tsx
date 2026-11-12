@@ -14,7 +14,7 @@ export default async function ProjectOpenGraphImage({ params }: { params: Promis
   const { slug } = await params;
   const project = getProjectBySlug(slug);
   return renderOgImage({
-    eyebrow: project ? `${project.category}${project.isSample ? " · Sample" : ""}` : "Portfolio",
+    eyebrow: project ? project.category : "Portfolio",
     title: project?.title ?? "Portfolio project",
   });
 }

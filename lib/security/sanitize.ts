@@ -85,6 +85,13 @@ export function isSafeUrl(url: string | null | undefined): boolean {
   }
 }
 
+/** Returns `url` if it passes `isSafeUrl`, otherwise returns `fallback`. */
+export function safeHref(url: unknown, fallback: string = "#"): string {
+  if (typeof url !== "string") return fallback;
+  const trimmed = url.trim();
+  return isSafeUrl(trimmed) ? trimmed : fallback;
+}
+
 /**
  * Sanitize plain text strings, trimming whitespace and enforcing max length.
  */
@@ -94,7 +101,8 @@ export function sanitizeText(val: unknown, maxLength: number = 5000): string {
 }
 
 /**
- * Whitelist filter for Project model to prevent mass assignment / unexpected field injection.
+ * Whitelist filter for Project model to prevent mass assignment / unexpected field injection
+ * and strip unsafe URL schemes from link/media fields.
  */
 export function filterProjectPayload(raw: Record<string, unknown>) {
   const allowedKeys = new Set([
@@ -125,6 +133,42 @@ export function filterProjectPayload(raw: Record<string, unknown>) {
     if (allowedKeys.has(key)) {
       result[key] = sanitized[key];
     }
+  }
+
+  if (result.coverImage && typeof result.coverImage === "object") {
+    const img = result.coverImage as Record<string, unknown>;
+    if (typeof img.src === "string" && img.src.trim() !== "" && !isSafeUrl(img.src)) {
+      img.src = "";
+    }
+  }
+
+  if (Array.isArray(result.screenshots)) {
+    result.screenshots = result.screenshots.filter(
+      (s) => s && typeof s === "object" && typeof (s as Record<string, unknown>).src === "string" && isSafeUrl((s as Record<string, unknown>).src as string)
+    );
+  }
+
+  if (Array.isArray(result.attachments)) {
+    result.attachments = result.attachments.filter(
+      (a) => a && typeof a === "object" && typeof (a as Record<string, unknown>).url === "string" && isSafeUrl((a as Record<string, unknown>).url as string)
+    );
+  }
+
+  if (Array.isArray(result.externalLinks)) {
+    result.externalLinks = result.externalLinks.filter(
+      (l) => l && typeof l === "object" && typeof (l as Record<string, unknown>).url === "string" && isSafeUrl((l as Record<string, unknown>).url as string)
+    );
+  }
+
+  if (Array.isArray(result.videos)) {
+    result.videos = result.videos.map((v) => {
+      if (!v || typeof v !== "object") return v;
+      const vid = { ...(v as Record<string, unknown>) };
+      if (typeof vid.posterImage === "string" && vid.posterImage.trim() !== "" && !isSafeUrl(vid.posterImage)) {
+        vid.posterImage = "";
+      }
+      return vid;
+    });
   }
 
   return result;

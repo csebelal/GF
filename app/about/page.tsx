@@ -1,5 +1,7 @@
+import Image from "next/image";
 import Link from "next/link";
 import { CVDownload } from "@/components/CVDownload";
+import { shouldUnoptimizeImage } from "@/lib/image-utils";
 import { ArrowRight, Award, Globe, MapPin, TrendingUp } from "@/components/Icons";
 import { pageMetadata } from "@/lib/metadata";
 import { formatMonth } from "@/lib/project-utils";
@@ -85,7 +87,7 @@ export default async function AboutPage() {
         <div className="container-page relative grid gap-12 pb-20 pt-14 sm:pt-20 lg:grid-cols-12 lg:gap-16">
           <div className="lg:col-span-7">
             <p className="eyebrow animate-rise">About {profile.shortName || profile.name}</p>
-            <h1 className="mt-6 animate-rise text-[clamp(2.5rem,5.4vw,4.1rem)] font-semibold leading-[1.04] tracking-[-0.035em] [animation-delay:60ms]">
+            <h1 className="mt-6 text-[clamp(2.5rem,5.4vw,4.1rem)] font-semibold leading-[1.04] tracking-[-0.035em]">
               {profile.aboutStory?.introHeadline || "I came to Salesforce from the support desk, and I still build for the person filing the ticket."}
             </h1>
             <p className="mt-7 max-w-2xl animate-rise text-lg leading-relaxed text-body sm:text-xl sm:leading-relaxed [animation-delay:120ms]">
@@ -100,18 +102,18 @@ export default async function AboutPage() {
             </div>
           </div>
 
-          <aside aria-label="At a glance" className="animate-rise [animation-delay:120ms] lg:col-span-5">
+          <aside aria-label="At a glance" className="lg:col-span-5">
             <div className="card overflow-hidden">
-              <picture>
-                <source srcSet={`${profile.portrait.small} 400w, ${profile.portrait.src} 600w`} sizes="(min-width: 1024px) 34vw, 90vw" type="image/webp" />
-                <img
-                  src={profile.portrait.fallback || profile.portrait.src}
-                  alt={profile.portrait.alt || profile.name}
-                  width={profile.portrait.width || 600}
-                  height={profile.portrait.height || 719}
-                  className="aspect-[4/3] w-full object-cover object-[50%_18%]"
-                />
-              </picture>
+              <Image
+                src={profile.portrait.src || profile.portrait.fallback}
+                alt={profile.portrait.alt || profile.name}
+                width={profile.portrait.width || 600}
+                height={profile.portrait.height || 719}
+                sizes="(min-width: 1024px) 34vw, 90vw"
+                priority
+                unoptimized={shouldUnoptimizeImage(profile.portrait.src || profile.portrait.fallback)}
+                className="aspect-[4/3] w-full object-cover object-[50%_18%]"
+              />
               <dl className="grid gap-4 p-6 text-[0.9375rem]">
                 <div className="flex items-start gap-3">
                   <TrendingUp className="mt-0.5 shrink-0 text-accent" />
@@ -161,7 +163,7 @@ export default async function AboutPage() {
           <p className="mt-3 max-w-2xl leading-relaxed text-body">
             Four habits drawn from earlier roles that keep Salesforce work predictable and clear.
           </p>
-          <ul className="mt-12 grid gap-6 sm:grid-cols-2 lg:grid-cols-4" data-reveal>
+          <ul className="mt-12 grid gap-6 sm:grid-cols-2 lg:grid-cols-4" data-reveal="stagger">
             {principles.map((principle: any) => (
               <li key={principle.title} className="card flex flex-col p-6">
                 <h3 className="text-lg font-semibold tracking-tight text-ink">{principle.title}</h3>

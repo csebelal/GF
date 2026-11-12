@@ -86,6 +86,45 @@ export async function getSession(): Promise<SessionPayload | null> {
   }
 }
 
+export interface LeanAdminSession {
+  _id: unknown;
+  email: string;
+  name: string;
+  role: "admin";
+  tokenVersion?: number;
+  lastLogin?: Date;
+}
+
+/**
+ * Lightweight lean variant of `getAuthenticatedAdmin` for endpoints that only
+ * verify admin identity and do not call `.save()`. Excludes `passwordHash` and
+ * skips Mongoose document hydration.
+ */
+export async function getAuthenticatedAdminLean(): Promise<LeanAdminSession | null> {
+  const session = await getSession();
+  if (!session || !session.email) return null;
+
+  try {
+    await connectDB();
+    const admin = await AdminModel.findOne({ email: session.email.toLowerCase().trim() })
+      .select("email name role tokenVersion lastLogin")
+      .lean<LeanAdminSession>();
+    if (!admin) return null;
+
+    if (
+      session.tokenVersion !== undefined &&
+      admin.tokenVersion !== undefined &&
+      session.tokenVersion !== admin.tokenVersion
+    ) {
+      return null;
+    }
+
+    return admin;
+  } catch {
+    return null;
+  }
+}
+
 /**
  * Authenticates the admin session against the database, verifying that the user
  * still exists and that their active tokenVersion matches (invalidating sessions on password change).

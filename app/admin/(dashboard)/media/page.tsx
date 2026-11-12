@@ -1,6 +1,10 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import { Alert, ArrowUpRight, Check, Copy, FileText, Plus } from "@/components/Icons";
+
+const focusRing =
+  "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#0e5f5b] focus-visible:ring-offset-2";
 
 export default function AdminMediaPage() {
   const [files, setFiles] = useState<any[]>([]);
@@ -15,7 +19,7 @@ export default function AdminMediaPage() {
       const json = await res.json();
       setFiles(json.files || []);
     } catch {
-      setMessage({ text: "Failed to load media files", type: "error" });
+      setMessage({ text: "Failed to load media files.", type: "error" });
     } finally {
       setLoading(false);
     }
@@ -43,12 +47,14 @@ export default function AdminMediaPage() {
         if (!res.ok) throw new Error(data.error);
       }
 
-      setMessage({ text: "Upload completed successfully!", type: "success" });
+      setMessage({ text: "Upload completed successfully.", type: "success" });
       await loadMedia();
-    } catch (err: any) {
-      setMessage({ text: err.message || "Failed to upload files", type: "error" });
+    } catch (err: unknown) {
+      const msg = err instanceof Error ? err.message : "Failed to upload files.";
+      setMessage({ text: msg, type: "error" });
     } finally {
       setUploading(false);
+      e.target.value = "";
     }
   };
 
@@ -68,96 +74,126 @@ export default function AdminMediaPage() {
     <div className="space-y-6">
       <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
         <div>
-          <h2 className="text-xl font-bold text-[#191c20]">Media Library</h2>
-          <p className="text-xs text-[#646b73]">
-            Upload and manage images, diagrams, CV PDFs, and file attachments
+          <h2 className="text-xl font-bold tracking-tight text-[#191c20]">Media Library</h2>
+          <p className="mt-0.5 text-sm text-[#4c535b]">
+            Upload and manage validated images (PNG, JPG, WebP) and PDF documents.
           </p>
         </div>
 
-        <label className="inline-flex cursor-pointer items-center gap-2 rounded-lg bg-[#0e5f5b] px-4 py-2 text-xs font-semibold text-white shadow-sm transition hover:bg-[#0a4744]">
-          <span>+</span>
+        <label
+          className={`inline-flex min-h-[40px] cursor-pointer items-center gap-2 rounded-xl bg-[#0e5f5b] px-4 py-2 text-xs font-semibold text-white shadow-sm transition-colors duration-200 hover:bg-[#0a4744] focus-within:ring-2 focus-within:ring-[#0e5f5b] focus-within:ring-offset-2 ${
+            uploading ? "pointer-events-none opacity-60" : ""
+          }`}
+        >
+          <Plus className="size-4" />
           <span>{uploading ? "Uploading..." : "Upload New Files"}</span>
           <input
             type="file"
             multiple
-            className="hidden"
+            accept=".png,.jpg,.jpeg,.webp,.pdf,image/png,image/jpeg,image/webp,application/pdf"
+            className="sr-only"
             onChange={handleUpload}
             disabled={uploading}
           />
         </label>
       </div>
 
-      {message && (
+      {message ? (
         <div
-          className={`rounded-lg p-3 text-sm ${
+          role={message.type === "error" ? "alert" : "status"}
+          aria-live="polite"
+          className={`flex items-start gap-2.5 rounded-xl border p-3.5 text-sm ${
             message.type === "success"
-              ? "border border-green-200 bg-green-50 text-green-800"
-              : "border border-red-200 bg-red-50 text-red-800"
+              ? "border-green-200 bg-green-50 text-[#166534]"
+              : "border-red-200 bg-red-50 text-[#991b1b]"
           }`}
         >
-          {message.text}
+          {message.type === "success" ? (
+            <Check className="mt-0.5 size-4 shrink-0" />
+          ) : (
+            <Alert className="mt-0.5 size-4 shrink-0" />
+          )}
+          <span>{message.text}</span>
         </div>
-      )}
+      ) : null}
 
       {loading ? (
-        <div className="p-12 text-center text-sm text-[#646b73]">Loading media files...</div>
+        <div className="rounded-2xl border border-[#e6e1d8] bg-white p-12 text-center text-sm text-[#4c535b]">
+          Loading media files...
+        </div>
       ) : files.length === 0 ? (
-        <div className="rounded-xl border border-dashed border-[#d4cdc0] p-12 text-center">
+        <div className="rounded-2xl border border-dashed border-[#d4cdc0] bg-white p-12 text-center">
           <p className="text-sm font-semibold text-[#191c20]">No media uploaded yet</p>
-          <p className="mt-1 text-xs text-[#646b73]">
-            Click the "Upload New Files" button above to upload images, PDFs, or CSV files.
+          <p className="mt-1 text-xs text-[#4c535b]">
+            Use the &ldquo;Upload New Files&rdquo; button above to add PNG, JPG, WebP images or PDF
+            documents.
           </p>
         </div>
       ) : (
-        <div className="grid grid-cols-2 gap-4 sm:grid-cols-3 lg:grid-cols-4">
+        <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4">
           {files.map((file) => (
-            <div
+            <article
               key={file.name}
-              className="group flex flex-col rounded-xl border border-[#e6e1d8] bg-white overflow-hidden shadow-sm transition hover:border-[#0e5f5b]"
+              className="group flex flex-col overflow-hidden rounded-2xl border border-[#e6e1d8] bg-white shadow-sm transition-colors duration-200 hover:border-[#0e5f5b]"
             >
-              <div className="flex h-36 items-center justify-center bg-[#faf8f4] overflow-hidden">
+              <div className="flex h-40 items-center justify-center overflow-hidden bg-[#faf8f4]">
                 {file.isImage ? (
                   <img
                     src={file.url}
                     alt={file.name}
-                    className="h-full w-full object-cover transition group-hover:scale-105"
+                    loading="lazy"
+                    className="h-full w-full object-cover"
                   />
                 ) : (
-                  <div className="flex flex-col items-center gap-1 text-[#646b73]">
-                    <span className="rounded bg-[#e6e1d8] px-2 py-0.5 text-[11px] font-bold text-[#191c20]">
+                  <div className="flex flex-col items-center gap-2 text-[#4c535b]">
+                    <FileText className="size-8 text-[#0e5f5b]" />
+                    <span className="rounded-md bg-[#e6e1d8] px-2 py-0.5 text-[11px] font-bold text-[#191c20]">
                       {file.name.split(".").pop()?.toUpperCase() || "FILE"}
                     </span>
                   </div>
                 )}
               </div>
 
-              <div className="flex flex-1 flex-col justify-between p-3">
+              <div className="flex flex-1 flex-col justify-between p-3.5">
                 <div>
                   <p className="truncate text-xs font-semibold text-[#191c20]" title={file.name}>
                     {file.name}
                   </p>
-                  <p className="mt-0.5 text-[11px] text-[#646b73]">{formatSize(file.size)}</p>
+                  <p className="mt-0.5 text-[11px] tabular-nums text-[#4c535b]">
+                    {formatSize(file.size)}
+                  </p>
                 </div>
 
-                <div className="mt-3 flex items-center justify-between border-t border-[#e6e1d8] pt-2">
+                <div className="mt-3 flex items-center justify-between border-t border-[#e6e1d8] pt-2.5">
                   <button
                     type="button"
                     onClick={() => copyToClipboard(file.url)}
-                    className="text-[11px] font-semibold text-[#0e5f5b] hover:underline"
+                    className={`inline-flex min-h-[30px] cursor-pointer items-center gap-1 rounded-md px-1.5 text-xs font-semibold text-[#0e5f5b] transition-colors duration-200 hover:bg-[#e1eeec] ${focusRing}`}
                   >
-                    {copiedUrl === file.url ? "✓ Copied!" : "Copy URL"}
+                    {copiedUrl === file.url ? (
+                      <>
+                        <Check className="size-3.5" />
+                        <span>Copied</span>
+                      </>
+                    ) : (
+                      <>
+                        <Copy className="size-3.5" />
+                        <span>Copy URL</span>
+                      </>
+                    )}
                   </button>
                   <a
                     href={file.url}
                     target="_blank"
                     rel="noopener noreferrer"
-                    className="text-[11px] text-[#646b73] hover:text-[#191c20]"
+                    className={`inline-flex min-h-[30px] items-center gap-1 rounded-md px-1.5 text-xs font-medium text-[#4c535b] transition-colors duration-200 hover:text-[#191c20] ${focusRing}`}
                   >
-                    Open ↗
+                    <span>Open</span>
+                    <ArrowUpRight className="size-3.5" />
                   </a>
                 </div>
               </div>
-            </div>
+            </article>
           ))}
         </div>
       )}

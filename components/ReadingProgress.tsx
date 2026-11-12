@@ -1,28 +1,33 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useRef } from "react";
 
 /** Thin progress bar for long documentation pages. Decorative only. */
 export function ReadingProgress({ targetId }: { targetId: string }) {
-  const [progress, setProgress] = useState(0);
+  const barRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
     let frame = 0;
+    let target = document.getElementById(targetId);
+
     const update = () => {
       frame = 0;
-      const target = document.getElementById(targetId);
-      if (!target) return;
+      if (!target || !target.isConnected) {
+        target = document.getElementById(targetId);
+      }
+      if (!target || !barRef.current) return;
       const rect = target.getBoundingClientRect();
       const total = rect.height - window.innerHeight * 0.6;
       const read = Math.min(Math.max(-rect.top + window.innerHeight * 0.2, 0), Math.max(total, 1));
-      setProgress(total > 0 ? read / total : 0);
+      const progress = total > 0 ? read / total : 0;
+      barRef.current.style.transform = `scaleX(${progress})`;
     };
     const onScroll = () => {
       if (!frame) frame = requestAnimationFrame(update);
     };
     update();
     window.addEventListener("scroll", onScroll, { passive: true });
-    window.addEventListener("resize", onScroll);
+    window.addEventListener("resize", onScroll, { passive: true });
     return () => {
       cancelAnimationFrame(frame);
       window.removeEventListener("scroll", onScroll);
@@ -33,8 +38,9 @@ export function ReadingProgress({ targetId }: { targetId: string }) {
   return (
     <div aria-hidden className="pointer-events-none fixed inset-x-0 top-0 z-[60] h-[3px]">
       <div
+        ref={barRef}
         className="h-full origin-left bg-accent transition-transform duration-150 ease-out"
-        style={{ transform: `scaleX(${progress})` }}
+        style={{ transform: "scaleX(0)" }}
       />
     </div>
   );

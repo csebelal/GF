@@ -1,11 +1,14 @@
+import Image from "next/image";
 import Link from "next/link";
 import { CVDownload } from "@/components/CVDownload";
+import { shouldUnoptimizeImage } from "@/lib/image-utils";
 import { ExperienceTimeline } from "@/components/ExperienceTimeline";
 import { ArrowRight, Award, Book, Check, LinkedIn, Mail, MapPin, TrendingUp, expertiseIcons } from "@/components/Icons";
 import { ProjectCard } from "@/components/ProjectCard";
-import { SampleCollectionNote, SectionHeader } from "@/components/Section";
+import { SectionHeader } from "@/components/Section";
 import { YouTubeEmbed } from "@/components/YouTubeEmbed";
 import { extractHeadings, readDoc, docExists } from "@/lib/markdown";
+import { safeHref } from "@/lib/security/sanitize";
 import {
   getDbProfile,
   getDbExperience,
@@ -59,7 +62,6 @@ export default async function HomePage() {
   ]);
 
   const featured = featuredProjects.map(toDbCardData);
-  const anySample = featured.some((project) => project.isSample);
   const walkthrough = getWalkthrough(profile.homeSettings?.featuredWalkthrough, publishedProjects);
   const homeAreas = expData.areas.filter((area: any) => area.onHome);
   const totalProjects = publishedProjects.length;
@@ -71,21 +73,21 @@ export default async function HomePage() {
   return (
     <>
       {/* A. Hero ------------------------------------------------------------ */}
-      <section className="relative overflow-hidden">
+      <section data-nav-section="/" className="relative overflow-hidden">
         <div aria-hidden className="grid-lines absolute inset-0" />
-        <div aria-hidden className="absolute -right-40 top-10 size-[38rem] rounded-full bg-accent-soft/70 blur-3xl" />
+        <div aria-hidden className="pointer-events-none absolute -right-40 top-10 size-[38rem] rounded-full bg-[radial-gradient(circle,rgba(225,238,236,0.85)_0%,transparent_70%)]" />
         <div className="container-page relative grid items-center gap-14 pb-16 pt-12 sm:pt-16 lg:grid-cols-12 lg:gap-10 lg:pb-20 lg:pt-16">
           <div className="lg:col-span-7">
-            <p className="inline-flex animate-rise items-center gap-2.5 rounded-full border border-line bg-white/80 py-1.5 pl-2 pr-3.5 text-sm font-medium text-ink shadow-soft backdrop-blur">
+            <p className="inline-flex animate-rise items-center gap-2.5 rounded-full border border-line bg-white/95 py-1.5 pl-2 pr-3.5 text-sm font-medium text-ink shadow-soft">
               {hero?.badgeDot !== false && (
-                <span className="relative flex size-2.5">
-                  <span className="absolute inset-0 rounded-full bg-accent/30 motion-safe:animate-ping" />
+                <span className="relative flex size-2.5 items-center justify-center">
+                  <span className="absolute -inset-1 rounded-full bg-accent/20" />
                   <span className="relative size-2.5 rounded-full bg-accent" />
                 </span>
               )}
               {hero?.badgeText || `${profile.jobTitle} at ${profile.employer}`}
             </p>
-            <h1 className="mt-7 animate-rise text-[clamp(2.5rem,4.7vw,4.15rem)] font-semibold leading-[1.03] tracking-[-0.04em] [animation-delay:60ms]">
+            <h1 className="mt-7 text-[clamp(2.5rem,4.7vw,4.15rem)] font-semibold leading-[1.03] tracking-[-0.04em]">
               {hero?.headlineMain || "Salesforce that sales, marketing and support teams"}{" "}
               <span className="text-muted">{hero?.headlineMuted || "can rely on."}</span>
             </h1>
@@ -99,7 +101,7 @@ export default async function HomePage() {
               )}
             </p>
             <div className="mt-9 flex animate-rise flex-wrap gap-3 [animation-delay:180ms]">
-              <Link href={hero?.primaryButtonUrl || "/portfolio"} className="btn btn-primary">
+              <Link href={safeHref(hero?.primaryButtonUrl, "/portfolio")} className="btn btn-primary">
                 {hero?.primaryButtonText || "Explore portfolio"} <ArrowRight />
               </Link>
               {hero?.showCvButton !== false && <CVDownload variant="secondary" cv={profile.cv} />}
@@ -134,23 +136,22 @@ export default async function HomePage() {
             )}
           </div>
 
-          <div className="relative mx-auto w-full max-w-md animate-rise [animation-delay:120ms] lg:col-span-5 lg:max-w-none">
+          <div className="relative mx-auto w-full max-w-md lg:col-span-5 lg:max-w-none">
             <div className="relative ml-auto w-[88%] sm:w-[82%] lg:w-[86%]">
               <div aria-hidden className="absolute -inset-3 rounded-[1.75rem] border border-line bg-white/60" />
-              <picture>
-                <source srcSet={`${profile.portrait.small} 400w, ${profile.portrait.src} 600w`} sizes="(min-width: 1024px) 30vw, 80vw" type="image/webp" />
-                <img
-                  src={profile.portrait.fallback || profile.portrait.src}
-                  alt={profile.portrait.alt || profile.name}
-                  width={profile.portrait.width || 600}
-                  height={profile.portrait.height || 719}
-                  fetchPriority="high"
-                  className="relative aspect-[5/6] w-full rounded-[1.25rem] object-cover object-top shadow-lift"
-                />
-              </picture>
+              <Image
+                src={profile.portrait.src || profile.portrait.fallback}
+                alt={profile.portrait.alt || profile.name}
+                width={profile.portrait.width || 600}
+                height={profile.portrait.height || 719}
+                sizes="(min-width: 1024px) 30vw, 80vw"
+                priority
+                unoptimized={shouldUnoptimizeImage(profile.portrait.src || profile.portrait.fallback)}
+                className="relative aspect-[5/6] w-full rounded-[1.25rem] object-cover object-top shadow-lift"
+              />
             </div>
             {hero?.careerStepCard?.show !== false && (
-              <div className="absolute -left-1 bottom-8 w-[15.5rem] rounded-2xl border border-line bg-white/95 p-4 shadow-float backdrop-blur sm:left-0">
+              <div className="absolute -left-1 bottom-8 w-[15.5rem] rounded-2xl border border-line bg-white/95 p-4 shadow-float sm:left-0">
                 <p className="text-xs font-semibold uppercase tracking-[0.12em] text-muted">
                   {hero?.careerStepCard?.label || "Career step"}
                 </p>
@@ -161,7 +162,7 @@ export default async function HomePage() {
               </div>
             )}
             {hero?.languagesCard?.show !== false && (
-              <div className="absolute right-0 top-6 hidden rounded-2xl border border-line bg-white/95 px-4 py-3 shadow-float backdrop-blur sm:block lg:-right-3">
+              <div className="absolute right-0 top-6 hidden rounded-2xl border border-line bg-white/95 px-4 py-3 shadow-float sm:block lg:-right-3">
                 <p className="text-xs font-semibold uppercase tracking-[0.12em] text-muted">
                   {hero?.languagesCard?.label || "Languages"}
                 </p>
@@ -189,7 +190,7 @@ export default async function HomePage() {
 
       {/* B. Featured projects ---------------------------------------------- */}
       {featured.length > 0 ? (
-        <section aria-labelledby="featured-title" className="py-24 sm:py-28">
+        <section data-nav-section="/portfolio" aria-labelledby="featured-title" className="py-24 sm:py-28 [contain:layout_style] [content-visibility:auto] [contain-intrinsic-size:auto_650px]">
           <div className="container-page">
             <div data-reveal>
               <SectionHeader
@@ -203,11 +204,6 @@ export default async function HomePage() {
                 intro="Each project pairs a walkthrough video or technical write-up with the requirements, configuration choices and tests behind it."
                 action={{ href: "/portfolio", label: `Browse all ${totalProjects} projects` }}
               />
-              {anySample ? (
-                <div className="mt-8">
-                  <SampleCollectionNote />
-                </div>
-              ) : null}
             </div>
             <div className="mt-12 grid gap-6" data-reveal>
               <ProjectCard project={featured[0]} variant="feature" />
@@ -224,7 +220,7 @@ export default async function HomePage() {
       ) : null}
 
       {/* C. Professional introduction ------------------------------------- */}
-      <section aria-labelledby="intro-title" className="border-y border-line bg-tint py-24 sm:py-28">
+      <section data-nav-section="/about" aria-labelledby="intro-title" className="border-y border-line bg-tint py-24 sm:py-28 [contain:layout_style] [content-visibility:auto] [contain-intrinsic-size:auto_550px]">
         <div className="container-page grid gap-12 lg:grid-cols-12 lg:gap-16">
           <div className="lg:col-span-5" data-reveal>
             <p className="eyebrow">{homeIntro?.eyebrow || "How I got here"}</p>
@@ -293,7 +289,7 @@ export default async function HomePage() {
       </section>
 
       {/* D. Areas of expertise -------------------------------------------- */}
-      <section aria-labelledby="expertise-title" className="py-24 sm:py-28">
+      <section data-nav-section="/expertise" aria-labelledby="expertise-title" className="py-24 sm:py-28 [contain:layout_style] [content-visibility:auto] [contain-intrinsic-size:auto_650px]">
         <div className="container-page">
           <div data-reveal>
             <SectionHeader
@@ -308,7 +304,7 @@ export default async function HomePage() {
               action={{ href: "/expertise", label: "Explore expertise in detail" }}
             />
           </div>
-          <ul className="mt-14 grid gap-px overflow-hidden rounded-[var(--radius-card)] border border-line bg-line sm:grid-cols-2 lg:grid-cols-3" data-reveal>
+          <ul className="mt-14 grid gap-px overflow-hidden rounded-[var(--radius-card)] border border-line bg-line sm:grid-cols-2 lg:grid-cols-3" data-reveal="stagger">
             {homeAreas.map((area: any) => {
               const Icon = expertiseIcons[area.icon as keyof typeof expertiseIcons] || expertiseIcons.automation;
               return (
@@ -332,7 +328,7 @@ export default async function HomePage() {
 
       {/* E. Featured walkthrough ------------------------------------------ */}
       {walkthrough ? (
-        <section aria-labelledby="walkthrough-title" className="border-y border-line bg-mist py-24 sm:py-28">
+        <section data-nav-section="/portfolio" aria-labelledby="walkthrough-title" className="border-y border-line bg-mist py-24 sm:py-28 [contain:layout_style] [content-visibility:auto] [contain-intrinsic-size:auto_550px]">
           <div className="container-page grid gap-12 lg:grid-cols-12 lg:items-center">
             <div className="lg:col-span-8" data-reveal>
               <YouTubeEmbed
@@ -345,11 +341,6 @@ export default async function HomePage() {
             </div>
             <div className="lg:col-span-4" data-reveal>
               <p className="eyebrow">Featured walkthrough</p>
-              {walkthrough.project.isSample ? (
-                <p className="mt-4 flex w-fit rounded-full border border-amber-line bg-amber-soft px-2.5 py-1 text-xs font-semibold text-amber">
-                  Sample video
-                </p>
-              ) : null}
               <h2 id="walkthrough-title" className="mt-4 text-[1.75rem] font-semibold leading-tight tracking-tight sm:text-[2rem]">
                 {walkthrough.project.title}
               </h2>
@@ -380,7 +371,7 @@ export default async function HomePage() {
       ) : null}
 
       {/* F. Working approach ---------------------------------------------- */}
-      <section aria-labelledby="approach-title" className="py-24 sm:py-28">
+      <section data-nav-section="/expertise" aria-labelledby="approach-title" className="py-24 sm:py-28 [contain:layout_style] [content-visibility:auto] [contain-intrinsic-size:auto_550px]">
         <div className="container-page">
           <div data-reveal>
             <SectionHeader
@@ -395,10 +386,10 @@ export default async function HomePage() {
               intro="The same five steps apply whether the request is a new picklist value or a new automated process. Smaller changes move through them in an afternoon."
             />
           </div>
-          <div className="relative mt-16" data-reveal>
+          <div className="relative mt-16">
             <span aria-hidden className="absolute left-[1.1875rem] top-2 hidden h-px w-[calc(100%-2.375rem)] bg-line-strong lg:block" />
             <span aria-hidden className="absolute bottom-2 left-[1.1875rem] top-2 w-px bg-line-strong lg:hidden" />
-          <ol className="relative grid gap-10 lg:grid-cols-5 lg:gap-6">
+          <ol data-reveal="stagger" className="relative grid gap-10 lg:grid-cols-5 lg:gap-6">
             {(expData.workingApproach || []).map((step: any, index: number) => (
               <li key={step.title} className="relative grid grid-cols-[2.375rem_1fr] gap-x-5 lg:block">
                 <span className="relative z-10 flex size-[2.375rem] items-center justify-center rounded-full border border-line-strong bg-canvas text-sm font-semibold tabular-nums text-ink lg:-mt-[1.0625rem]">
@@ -417,7 +408,7 @@ export default async function HomePage() {
       </section>
 
       {/* G. Experience and learning --------------------------------------- */}
-      <section aria-labelledby="experience-title" className="border-y border-line bg-tint py-24 sm:py-28">
+      <section data-nav-section="/experience" aria-labelledby="experience-title" className="border-y border-line bg-tint py-24 sm:py-28 [contain:layout_style] [content-visibility:auto] [contain-intrinsic-size:auto_650px]">
         <div className="container-page">
           <div data-reveal>
             <SectionHeader
@@ -481,11 +472,11 @@ export default async function HomePage() {
       </section>
 
       {/* H. Contact invitation -------------------------------------------- */}
-      <section aria-labelledby="contact-title" className="py-24 sm:py-28">
+      <section data-nav-section="/contact" aria-labelledby="contact-title" className="py-24 sm:py-28 [contain:layout_style] [content-visibility:auto] [contain-intrinsic-size:auto_420px]">
         <div className="container-page">
           <div className="relative overflow-hidden rounded-[1.5rem] border border-line bg-surface p-8 shadow-lift sm:p-12 lg:p-16" data-reveal>
             <div aria-hidden className="grid-lines absolute inset-0 opacity-70" />
-            <div aria-hidden className="absolute -right-24 -top-24 size-80 rounded-full bg-accent-soft blur-3xl" />
+            <div aria-hidden className="pointer-events-none absolute -right-24 -top-24 size-80 rounded-full bg-[radial-gradient(circle,rgba(225,238,236,0.9)_0%,transparent_70%)]" />
             <div className="relative grid gap-10 lg:grid-cols-12 lg:items-end">
               <div className="lg:col-span-7">
                 <p className="eyebrow">Get in touch</p>
@@ -502,10 +493,10 @@ export default async function HomePage() {
                   <Mail /> {profile.email}
                 </a>
                 <div className="flex flex-wrap gap-3 lg:justify-end">
-                  <a href={profile.linkedin.url} target="_blank" rel="noopener noreferrer" className="btn btn-secondary">
+                  <a href={safeHref(profile.linkedin.url, "https://www.linkedin.com")} target="_blank" rel="noopener noreferrer" className="btn btn-secondary">
                     <LinkedIn /> LinkedIn <span className="sr-only">(opens in a new tab)</span>
                   </a>
-                  <CVDownload />
+                  <CVDownload cv={profile.cv} />
                 </div>
                 <p className="mt-1 inline-flex items-center gap-2 text-sm text-muted">
                   <MapPin /> Based in {profile.location.city}, {profile.location.country}

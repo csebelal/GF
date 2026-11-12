@@ -95,6 +95,45 @@ export const TrendingUp = (p: IconProps) => (
 export const Caption = (p: IconProps) => (
   <Base {...p}><rect x="3" y="5" width="18" height="14" rx="2.5" /><path d="M10 10.5a2 2 0 1 0 0 3M16 10.5a2 2 0 1 0 0 3" /></Base>
 );
+export const Lock = (p: IconProps) => (
+  <Base {...p}><rect x="5" y="11" width="14" height="10" rx="2.5" /><path d="M8 11V7a4 4 0 0 1 8 0v4" /></Base>
+);
+export const Eye = (p: IconProps) => (
+  <Base {...p}><path d="M2 12s3.5-6.5 10-6.5S22 12 22 12s-3.5 6.5-10 6.5S2 12 2 12Z" /><circle cx="12" cy="12" r="2.75" /></Base>
+);
+export const EyeOff = (p: IconProps) => (
+  <Base {...p}><path d="m3 3 18 18M10.6 10.6a2.75 2.75 0 0 0 3.8 3.8" /><path d="M9.88 5.24A10.7 10.7 0 0 1 12 5.5c6.5 0 10 6.5 10 6.5a18.2 18.2 0 0 1-3.36 4.28M6.61 6.61A18.3 18.3 0 0 0 2 12s3.5 6.5 10 6.5a9.9 9.9 0 0 0 4.39-1.01" /></Base>
+);
+export const LayoutDashboard = (p: IconProps) => (
+  <Base {...p}><rect x="3.5" y="3.5" width="7" height="9" rx="1.5" /><rect x="13.5" y="3.5" width="7" height="5" rx="1.5" /><rect x="13.5" y="11.5" width="7" height="9" rx="1.5" /><rect x="3.5" y="15.5" width="7" height="5" rx="1.5" /></Base>
+);
+export const User = (p: IconProps) => (
+  <Base {...p}><circle cx="12" cy="8" r="4" /><path d="M4.5 20.5a7.5 7.5 0 0 1 15 0" /></Base>
+);
+export const Folder = (p: IconProps) => (
+  <Base {...p}><path d="M3 6.5A2.5 2.5 0 0 1 5.5 4h4l2 2.5h7A2.5 2.5 0 0 1 21 9v9a2.5 2.5 0 0 1-2.5 2.5h-13A2.5 2.5 0 0 1 3 18Z" /></Base>
+);
+export const Briefcase = (p: IconProps) => (
+  <Base {...p}><rect x="3" y="7" width="18" height="13" rx="2.5" /><path d="M8.5 7V5a2 2 0 0 1 2-2h3a2 2 0 0 1 2 2v2" /><path d="M3 12h18" /></Base>
+);
+export const ImageIcon = (p: IconProps) => (
+  <Base {...p}><rect x="3" y="4.5" width="18" height="15" rx="2.5" /><circle cx="8.5" cy="9.5" r="1.5" /><path d="m21 15-4.5-4.5L6 19.5" /></Base>
+);
+export const Settings = (p: IconProps) => (
+  <Base {...p}><circle cx="12" cy="12" r="3" /><path d="M12 2.5v2.2M12 19.3v2.2M4.7 6.7l1.6 1.6M17.7 17.7l1.6 1.6M2.5 12h2.2M19.3 12h2.2M4.7 17.3l1.6-1.6M17.7 6.3l1.6-1.6" /></Base>
+);
+export const LogOut = (p: IconProps) => (
+  <Base {...p}><path d="M9 21H5.5A2.5 2.5 0 0 1 3 18.5v-13A2.5 2.5 0 0 1 5.5 3H9" /><path d="M16 17l5-5-5-5M21 12H9" /></Base>
+);
+export const Plus = (p: IconProps) => (
+  <Base {...p}><path d="M12 5v14M5 12h14" /></Base>
+);
+export const ChevronDown = (p: IconProps) => (
+  <Base {...p}><path d="m6 9 6 6 6-6" /></Base>
+);
+export const ChevronUp = (p: IconProps) => (
+  <Base {...p}><path d="m18 15-6-6-6 6" /></Base>
+);
 
 /* Expertise icons --------------------------------------------------------- */
 export const IconAutomation = (p: IconProps) => (

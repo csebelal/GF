@@ -73,6 +73,13 @@ describe("Security Suite: Secure File Uploads", () => {
     assert.equal(res.valid, true);
     assert.ok(res.sanitizedFilename?.endsWith(".pdf"));
   });
+
+  it("blocks unapproved extensions even when MIME type and magic bytes match PNG", () => {
+    const pngHeader = Buffer.from([0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a, 0x00, 0x00]);
+    const file = new File([pngHeader], "payload.bin", { type: "image/png" });
+    const res = validateUploadedFile(file, pngHeader);
+    assert.equal(res.valid, false);
+  });
 });
 
 describe("Security Suite: NoSQL Injection & Payload Filtering", () => {
@@ -114,6 +121,36 @@ describe("Security Suite: NoSQL Injection & Payload Filtering", () => {
     assert.equal(filtered.adminToken, undefined);
     assert.equal(filtered.isAdmin, undefined);
     assert.equal(filtered.injectedScript, undefined);
+  });
+
+  it("filterProjectPayload strips unsafe URLs from links and media", () => {
+    const payload = {
+      title: "Link Hygiene",
+      slug: "link-hygiene",
+      summary: "Summary",
+      category: "Automation",
+      coverImage: { src: "javascript:alert(1)", alt: "bad" },
+      screenshots: [
+        { src: "/uploads/ok.png", alt: "ok" },
+        { src: "data:text/html,<script>alert(1)</script>", alt: "bad" },
+      ],
+      attachments: [
+        { label: "Bad", url: "javascript:alert(1)" },
+        { label: "Good", url: "/files/samples/routing-matrix-sample.csv" },
+      ],
+      externalLinks: [
+        { label: "Bad", url: "vbscript:msgbox(1)" },
+        { label: "Good", url: "https://help.salesforce.com" },
+      ],
+    };
+
+    const filtered = filterProjectPayload(payload) as any;
+    assert.equal(filtered.coverImage.src, "");
+    assert.equal(filtered.screenshots.length, 1);
+    assert.equal(filtered.attachments.length, 1);
+    assert.equal(filtered.attachments[0].label, "Good");
+    assert.equal(filtered.externalLinks.length, 1);
+    assert.equal(filtered.externalLinks[0].label, "Good");
   });
 });
 

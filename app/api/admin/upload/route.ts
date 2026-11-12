@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server";
-import { getAuthenticatedAdmin } from "@/lib/auth/session";
+import { getAuthenticatedAdminLean } from "@/lib/auth/session";
 import { validateUploadedFile } from "@/lib/security/file-validation";
 import { RateLimiters } from "@/lib/security/rate-limit";
 import { extractClientIp, logSecurityEvent } from "@/lib/security/audit";
@@ -24,7 +24,7 @@ export async function POST(request: Request) {
   }
 
   try {
-    const admin = await getAuthenticatedAdmin();
+    const admin = await getAuthenticatedAdminLean();
     if (!admin) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }

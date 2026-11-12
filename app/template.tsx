@@ -1,4 +1,5 @@
-/** Re-mounts on every navigation, giving each page a short, subtle fade-in. */
-export default function Template({ children }: { children: React.ReactNode }) {
-  return <div className="animate-fade">{children}</div>;
+import { PageTransition } from "@/components/PageTransition";
+
+export default function RootTemplate({ children }: { children: React.ReactNode }) {
+  return <PageTransition>{children}</PageTransition>;
 }

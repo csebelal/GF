@@ -1,6 +1,8 @@
 "use client";
 
+import Image from "next/image";
 import { useEffect, useMemo, useRef, useState } from "react";
+import { shouldUnoptimizeImage } from "@/lib/image-utils";
 import { buildEmbedUrl, buildThumbnailUrl, buildWatchUrl, parseYouTubeUrl } from "@/lib/youtube";
 import { Alert, ArrowUpRight, Caption, Play } from "./Icons";
 
@@ -128,16 +130,18 @@ export function YouTubeEmbed({
             aria-label={`Play video: ${title}`}
           >
             {posterSrc ? (
-              <img
+              <Image
                 key={posterSrc}
                 ref={posterRef}
                 src={posterSrc}
                 alt=""
-                loading={priority ? "eager" : "lazy"}
-                decoding="async"
+                fill
+                sizes="(min-width: 1024px) 60vw, 100vw"
+                priority={priority}
+                unoptimized={shouldUnoptimizeImage(posterSrc)}
                 onLoad={handleThumbLoad}
                 onError={() => setPosterIndex((index) => index + 1)}
-                className="absolute inset-0 size-full object-cover transition-transform duration-700 ease-out group-hover:scale-[1.02]"
+                className="object-cover transition-transform duration-700 ease-out motion-safe:group-hover:scale-[1.02]"
               />
             ) : (
               <GeneratedPoster title={title} portrait={isPortrait} />
@@ -145,7 +149,7 @@ export function YouTubeEmbed({
             <span aria-hidden className="absolute inset-0 bg-gradient-to-t from-ink/20 via-transparent to-transparent transition-opacity duration-300 group-hover:opacity-80" />
             <span
               aria-hidden
-              className="absolute left-1/2 top-1/2 flex size-16 -translate-x-1/2 -translate-y-1/2 items-center justify-center rounded-full bg-white/95 text-ink shadow-lift ring-1 ring-black/5 transition-transform duration-300 group-hover:scale-105 sm:size-20"
+              className="absolute left-1/2 top-1/2 flex size-16 -translate-x-1/2 -translate-y-1/2 items-center justify-center rounded-full bg-white/95 text-ink shadow-lift ring-1 ring-black/5 transition-transform duration-300 motion-safe:group-hover:scale-105 sm:size-20"
             >
               <Play className="ml-1 text-2xl sm:text-[1.75rem]" />
             </span>

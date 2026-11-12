@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { AnchorSpyNav } from "@/components/AnchorSpyNav";
 import { ArrowRight, Check, expertiseIcons } from "@/components/Icons";
 import { PageHeader } from "@/components/Section";
 import { pageMetadata } from "@/lib/metadata";
@@ -39,17 +40,10 @@ export default async function ExpertisePage() {
         }
         intro="Each area below explains the business problem, what I do about it day to day, the tools involved, and where to see it in the portfolio."
       >
-        <nav aria-label="Expertise areas">
-          <ul className="flex flex-wrap gap-2">
-            {expertiseAreas.map((area: any) => (
-              <li key={area.id}>
-                <a href={`#${area.id}`} className="chip min-h-10 px-3.5 text-sm hover:border-line-strong hover:text-ink">
-                  {area.shortTitle}
-                </a>
-              </li>
-            ))}
-          </ul>
-        </nav>
+        <AnchorSpyNav
+          ariaLabel="Expertise areas"
+          items={expertiseAreas.map((area: any) => ({ id: area.id, label: area.shortTitle }))}
+        />
       </PageHeader>
 
       <div>
@@ -118,7 +112,6 @@ export default async function ExpertisePage() {
                                 <span className="block font-semibold text-ink group-hover:text-accent">{project.title}</span>
                                 <span className="block text-sm text-muted">
                                   {contentTypeLabels[project.contentType]}
-                                  {project.isSample ? " · Sample" : ""}
                                 </span>
                               </span>
                               <ArrowRight className="shrink-0 text-muted transition-transform group-hover:translate-x-1 group-hover:text-accent" />
@@ -153,7 +146,7 @@ export default async function ExpertisePage() {
               How the tools listed on my CV connect to day-to-day admin work.
             </p>
           </div>
-          <ul className="mt-12 grid gap-6 sm:grid-cols-2 lg:grid-cols-4" data-reveal>
+          <ul className="mt-12 grid gap-6 sm:grid-cols-2 lg:grid-cols-4" data-reveal="stagger">
             {(toolsInPractice || []).map((tool: any) => (
               <li key={tool.name} className="card flex flex-col p-6">
                 <h3 className="text-lg font-semibold tracking-tight text-ink">{tool.name}</h3>

@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 import { revalidatePath } from "next/cache";
-import { getAuthenticatedAdmin } from "@/lib/auth/session";
+import { getAuthenticatedAdminLean } from "@/lib/auth/session";
 import { connectDB } from "@/lib/db/connection";
 import { ProjectModel } from "@/lib/db/models/Project";
 import { invalidateRepositoryCache, getDbProjects } from "@/lib/db/repository";
@@ -8,20 +8,37 @@ import { filterProjectPayload } from "@/lib/security/sanitize";
 import { logSecurityEvent } from "@/lib/security/audit";
 
 const SLUG_PATTERN = /^[a-z0-9]+(?:-[a-z0-9]+)*$/;
+const NO_STORE_HEADERS = { "Cache-Control": "private, no-store" };
 
-export async function GET() {
-  const admin = await getAuthenticatedAdmin();
+export async function GET(request: Request) {
+  const admin = await getAuthenticatedAdminLean();
   if (!admin) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
 
   const projects = await getDbProjects();
-  return NextResponse.json(projects);
+  const { searchParams } = new URL(request.url);
+  if (searchParams.get("summary") === "1") {
+    const summaries = projects.map((p) => ({
+      _id: p._id,
+      slug: p.slug,
+      title: p.title,
+      category: p.category,
+      status: p.status,
+      featured: p.featured,
+      tools: p.tools,
+      videoCount: p.videos?.length || 0,
+      hasDocs: Boolean(p.documentationContent || p.documentation),
+    }));
+    return NextResponse.json(summaries, { headers: NO_STORE_HEADERS });
+  }
+
+  return NextResponse.json(projects, { headers: NO_STORE_HEADERS });
 }
 
 export async function POST(request: Request) {
   try {
-    const admin = await getAuthenticatedAdmin();
+    const admin = await getAuthenticatedAdminLean();
     if (!admin) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
@@ -60,13 +77,13 @@ export async function POST(request: Request) {
 
     await connectDB();
 
-    // Check duplicate slug
-    const duplicate = await ProjectModel.findOne({ slug });
+    // Check duplicate slug with minimal projection
+    const duplicate = await ProjectModel.findOne({ slug }).select("_id").lean();
     if (duplicate) {
       return NextResponse.json({ error: `Slug "${slug}" is already in use.` }, { status: 400 });
     }
 
-    const count = await ProjectModel.countDocuments();
+    const count = await ProjectModel.estimatedDocumentCount();
     const newProject = await ProjectModel.create({
       ...data,
       slug,

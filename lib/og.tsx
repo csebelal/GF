@@ -5,10 +5,18 @@ import { profile } from "@/content/site";
 
 export const ogSize = { width: 1200, height: 630 };
 
+let cachedPortraitSrc: string | null = null;
+
+async function getPortraitDataUri(): Promise<string> {
+  if (cachedPortraitSrc) return cachedPortraitSrc;
+  const portrait = await fs.readFile(path.join(process.cwd(), "public", "images", "profile", "afrin-chishti-portrait.jpg"));
+  cachedPortraitSrc = `data:image/jpeg;base64,${portrait.toString("base64")}`;
+  return cachedPortraitSrc;
+}
+
 /** Shared social card layout used by the site and project routes. */
 export async function renderOgImage({ eyebrow, title, footnote }: { eyebrow: string; title: string; footnote?: string }) {
-  const portrait = await fs.readFile(path.join(process.cwd(), "public", "images", "profile", "afrin-chishti-portrait.jpg"));
-  const portraitSrc = `data:image/jpeg;base64,${portrait.toString("base64")}`;
+  const portraitSrc = await getPortraitDataUri();
 
   return new ImageResponse(
     (

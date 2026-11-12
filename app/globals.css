@@ -32,6 +32,14 @@
   --color-amber-soft: #fbf1df;
   --color-amber-line: #ecd3a3;
 
+  /* Semantic Status (Admin & Feedback) */
+  --color-success: #166534;
+  --color-success-soft: #f0fdf4;
+  --color-success-line: #bbf7d0;
+  --color-danger: #991b1b;
+  --color-danger-soft: #fef2f2;
+  --color-danger-line: #fecaca;
+
   --radius-card: 1rem;
   --radius-control: 0.625rem;
 
@@ -39,16 +47,21 @@
   --shadow-lift: 0 2px 4px rgb(25 28 32 / 0.04), 0 22px 44px -22px rgb(25 28 32 / 0.26);
   --shadow-float: 0 1px 2px rgb(25 28 32 / 0.05), 0 12px 32px -12px rgb(25 28 32 / 0.18);
 
-  --animate-rise: rise 0.7s cubic-bezier(0.22, 1, 0.36, 1) both;
-  --animate-fade: fade 0.45s ease-out both;
+  --animate-rise: rise 0.45s cubic-bezier(0.22, 1, 0.36, 1) both;
+  --animate-fade: fade 0.3s ease-out both;
+  --animate-page-enter: page-enter 0.22s cubic-bezier(0.22, 1, 0.36, 1) backwards;
 
   @keyframes rise {
-    from { opacity: 0; transform: translateY(14px); }
+    from { opacity: 0; transform: translateY(10px); }
     to { opacity: 1; transform: none; }
   }
   @keyframes fade {
     from { opacity: 0; }
     to { opacity: 1; }
+  }
+  @keyframes page-enter {
+    from { opacity: 0; transform: translateY(6px); }
+    to { opacity: 1; transform: none; }
   }
 }
 
@@ -94,7 +107,7 @@
   [tabindex="-1"]:focus { outline: none; }
 
   @media (prefers-reduced-motion: no-preference) {
-    html:not([data-scroll-behavior="smooth"]) { scroll-behavior: smooth; }
+    html[data-scroll-behavior="smooth"] { scroll-behavior: smooth; }
   }
 }
 
@@ -136,6 +149,7 @@
     font-size: 0.9375rem;
     font-weight: 600;
     line-height: 1.2;
+    cursor: pointer;
     transition: background-color 0.2s, color 0.2s, border-color 0.2s, box-shadow 0.2s, transform 0.15s;
     white-space: nowrap;
   }
@@ -318,13 +332,26 @@
    is only added by an inline script when motion is allowed, and removed again
    if the observer never starts.
    -------------------------------------------------------------------------- */
-html.reveal-on [data-reveal]:not(.is-visible) {
+html.reveal-on [data-reveal]:not([data-reveal="stagger"]):not(.is-visible) {
   opacity: 0;
-  transform: translateY(18px);
+  transform: translateY(12px) scale(0.995);
 }
-html.reveal-on [data-reveal] {
-  transition: opacity 0.8s cubic-bezier(0.22, 1, 0.36, 1), transform 0.8s cubic-bezier(0.22, 1, 0.36, 1);
+html.reveal-on [data-reveal]:not([data-reveal="stagger"]) {
+  transition: opacity 0.38s cubic-bezier(0.22, 1, 0.36, 1), transform 0.38s cubic-bezier(0.22, 1, 0.36, 1);
 }
+
+html.reveal-on [data-reveal="stagger"]:not(.is-visible) > * {
+  opacity: 0;
+  transform: translateY(12px) scale(0.995);
+}
+html.reveal-on [data-reveal="stagger"] > * {
+  transition: opacity 0.36s cubic-bezier(0.22, 1, 0.36, 1), transform 0.36s cubic-bezier(0.22, 1, 0.36, 1);
+}
+html.reveal-on [data-reveal="stagger"].is-visible > *:nth-child(1) { transition-delay: 0ms; }
+html.reveal-on [data-reveal="stagger"].is-visible > *:nth-child(2) { transition-delay: 35ms; }
+html.reveal-on [data-reveal="stagger"].is-visible > *:nth-child(3) { transition-delay: 70ms; }
+html.reveal-on [data-reveal="stagger"].is-visible > *:nth-child(4) { transition-delay: 105ms; }
+html.reveal-on [data-reveal="stagger"].is-visible > *:nth-child(n + 5) { transition-delay: 140ms; }
 
 @media (prefers-reduced-motion: reduce) {
   *, *::before, *::after {
