@@ -4,7 +4,6 @@ import { Download } from "./Icons";
 const DEFAULT_CV = {
   href: "/cv/Afrin-Akter-Chishti-Salesforce-Administrator-CV.pdf",
   downloadName: "Afrin-Akter-Chishti-Salesforce-Administrator-CV.pdf",
-  sizeLabel: "PDF, 812 KB",
 };
 
 interface CVDownloadProps {
@@ -16,7 +15,7 @@ interface CVDownloadProps {
   cv?: {
     href: string;
     downloadName: string;
-    sizeLabel: string;
+    sizeLabel?: string;
   };
 }
 
@@ -25,20 +24,22 @@ export function CVDownload({
   variant = "secondary",
   size = "md",
   label = "Download CV",
-  showMeta = false,
   className = "",
   cv: customCv,
 }: CVDownloadProps) {
   const cv = customCv ?? DEFAULT_CV;
   const cvHref = safeHref(cv.href, DEFAULT_CV.href);
-  const meta = cv.sizeLabel;
 
   if (variant === "link") {
     return (
-      <a href={cvHref} download={cv.downloadName} className={`link-arrow ${className}`}>
+      <a
+        href={cvHref}
+        download={cv.downloadName}
+        className={`link-arrow transition-colors duration-200 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent focus-visible:ring-offset-2 ${className}`}
+      >
         <Download className="text-[1.05em]" />
-        {label}
-        {showMeta ? <span className="font-normal text-muted">({meta})</span> : <span className="sr-only">({meta})</span>}
+        <span>{label}</span>
+        <span className="sr-only">(PDF)</span>
       </a>
     );
   }
@@ -48,15 +49,11 @@ export function CVDownload({
     <a
       href={cvHref}
       download={cv.downloadName}
-      className={`btn ${variantClass} ${size === "sm" ? "btn-sm" : ""} ${className}`}
+      className={`btn ${variantClass} ${size === "sm" ? "btn-sm" : ""} transition-all duration-200 ${className}`}
     >
       <Download className="text-[1.1em]" />
       <span>{label}</span>
-      {showMeta ? (
-        <span className={`text-xs font-medium ${variant === "primary" ? "text-white/85" : "text-muted"}`}>{meta}</span>
-      ) : (
-        <span className="sr-only">({meta})</span>
-      )}
+      <span className="sr-only">(PDF)</span>
     </a>
   );
 }

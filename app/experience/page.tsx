@@ -208,7 +208,7 @@ export default async function ExperiencePage() {
             ))}
           </ul>
           <div className="mt-14 flex flex-wrap items-center gap-4">
-            <CVDownload variant="primary" showMeta />
+            <CVDownload variant="primary" />
             <Link href="/expertise" className="link-arrow">
               See how this experience maps to expertise <ArrowRight />
             </Link>
