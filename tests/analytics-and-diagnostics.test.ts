@@ -1,5 +1,6 @@
-import { describe, it } from "node:test";
+import { describe, it, after } from "node:test";
 import assert from "node:assert/strict";
+import mongoose from "mongoose";
 import {
   createDailyVisitorHash,
   decodeAnalyticsKey,
@@ -207,5 +208,9 @@ describe("Google Analytics validation", () => {
     assert.equal(isValidGoogleAnalyticsId("<script>alert(1)</script>"), false);
     assert.equal(isValidGoogleAnalyticsId("G-ABC'; DROP TABLE;--"), false);
     assert.equal(isValidGoogleAnalyticsId("G-INVALID_CHAR!"), false);
+  });
+
+  after(async () => {
+    await mongoose.disconnect();
   });
 });

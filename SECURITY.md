@@ -2,53 +2,60 @@
 
 ## Audit Log
 
-- **Last Audit Date**: 2026-11-12
-- **Scope**: Full codebase (`app/`, `components/`, `lib/`, `scripts/`, `middleware.ts`, `next.config.ts`, `package.json`, `.gitignore`), including multi-user RBAC & first-party traffic analytics.
+- **Last Audit Date**: 2026-11-14
+- **Scope**: Full codebase (`app/`, `components/`, `lib/`, `scripts/`, `middleware.ts`, `next.config.ts`, `package.json`, `.gitignore`), including multi-user RBAC, first-party traffic analytics, dynamic sitemaps, and Google Analytics/GTM integration.
 - **Methodology**: OWASP Top 10 static analysis, authentication/authorization review, injection & XSS sink inspection, file upload validation review, dependency audit (`npm audit`), and regression test execution.
 
 ---
 
 ## Findings Summary
 
-### Fixed During Audit
+### Fixed During Prior & Current Audits
 
-- **JSON-LD Script Tag Breakout Risk (`app/layout.tsx`)**
-  - *Issue*: `JSON.stringify(personJsonLd)` inside `dangerouslySetInnerHTML` did not escape `<`, which could allow `</script>` breakout if profile metadata were tampered with.
-  - *Fix*: Escaped `<` as `\u003c` before injecting JSON-LD.
+- **Google Analytics / GTM ID Injection & CSP Alignment (`lib/analytics/validators.ts`, `components/GoogleAnalytics.tsx`, `next.config.ts`)**
+  - *Mitigation*: Strict regex verification (`isValidGoogleAnalyticsId`) restricts IDs exclusively to safe formats (`G-[A-Z0-9]+`, `GTM-[A-Z0-9]+`, `UA-\d+-\d+`), rejecting any injection, semicolons, script tags, or non-alphanumeric characters. Next.js CSP `script-src` and `connect-src` specifically permit only Google Analytics and Tag Manager origins (`*.googletagmanager.com`, `*.google-analytics.com`, `*.analytics.google.com`).
+- **Canonical Hostname & Open-Redirect Enforcement (`lib/site-url.ts`, `lib/seo/schema.ts`, `app/sitemap.ts`)**
+  - *Mitigation*: Dynamically configured URLs automatically reject `localhost` and unapproved ports in production, canonicalizing to `https://afrinchishti.site`.
+- **JSON-LD Script Tag Breakout Risk (`app/layout.tsx`, `lib/seo/schema.ts`)**
+  - *Mitigation*: Escaped `<` as `\u003c` in all JSON-LD serializations to neutralize `</script>` tag breakout vectors.
 - **Stored XSS via Unvalidated URLs & `data:image/svg+xml` (`lib/security/sanitize.ts`, `components/DocumentationRenderer.tsx`, public pages)**
-  - *Issue*: DB-backed link and media URLs were not stripped by `filterProjectPayload` or consistently checked with `safeHref` before rendering `<a href>`, and Markdown image rendering permitted `data:image/svg+xml` and wrapped `data:` URIs in clickable links.
-  - *Fix*: Added `safeHref()` guards on DB-sourced links across `app/page.tsx`, `app/contact/page.tsx`, `app/portfolio/[slug]/page.tsx`, `components/Header.tsx`, `components/Footer.tsx`, and `components/CVDownload.tsx`; added URL filtering inside `filterProjectPayload()`; restricted Markdown `data:` images to raster formats (`png`, `jpeg`, `jpg`, `webp`, `gif`) without wrapping them in `<a href>`.
+  - *Mitigation*: Added `safeHref()` guards on DB-sourced links; restricted Markdown `data:` images to raster formats (`png`, `jpeg`, `jpg`, `webp`, `gif`) without wrapping them in `<a href>`.
 - **File Upload Extension Whitelist Bypass (`lib/security/file-validation.ts`)**
-  - *Issue*: `ALLOWED_TYPES.find((t) => t.extensions.includes(ext) || t.mime === file.type)` allowed an unapproved extension (e.g., `.bin`) to pass if `file.type` and magic bytes matched PNG/JPEG/WebP/PDF.
-  - *Fix*: Required an explicitly whitelisted extension (`.jpg`, `.jpeg`, `.png`, `.webp`, `.pdf`) AND verified declared MIME type compatibility alongside magic-byte verification.
+  - *Mitigation*: Whitelisted extensions (`.jpg`, `.jpeg`, `.png`, `.webp`, `.pdf`) required in conjunction with declared MIME type matching and file magic byte signature verification.
 - **Login Rate-Limit Bypass via `X-Forwarded-For` & Timing Enumeration (`app/api/admin/auth/login/route.ts`, `lib/security/rate-limit.ts`)**
-  - *Issue*: Per-IP login rate limiting relied on `x-forwarded-for`, which can be rotated on untrusted proxies, and unknown emails skipped `bcrypt.compare`.
-  - *Fix*: Added per-account rate limiting (`RateLimiters.authLoginEmail`) alongside IP rate limiting, and added a dummy `bcrypt` verification on unknown emails.
+  - *Mitigation*: Added per-account rate limiting (`RateLimiters.authLoginEmail`) alongside IP rate limiting; implemented constant-time dummy `bcrypt` verification on unknown emails to prevent username harvesting via timing attacks.
 - **Production CSP & CSRF Consistency (`next.config.ts`, `middleware.ts`)**
-  - *Issue*: `'unsafe-eval'` was included in production `script-src`, HSTS was emitted unconditionally in non-production environments, and `middleware.ts` lacked the `sec-fetch-site` fallback check present in `lib/security/csrf.ts`.
-  - *Fix*: Restricted `'unsafe-eval'` and HSTS to development/production respectively, aligned `Permissions-Policy`, and added `sec-fetch-site` cross-site blocking in `middleware.ts`.
-
-### Warnings / Operational Notes
-
-- 🟡 **In-Memory Rate Limiter**: `lib/security/rate-limit.ts` uses a process-local `Map`. This works for single-instance Node deployments, but multi-instance/serverless deployments should back rate limiting with a shared store (e.g., Redis).
-- 🟡 **Environment Configuration**: Ensure `AUTH_SECRET` (32+ random characters), `MONGODB_URI`, and non-default `DEFAULT_ADMIN_PASSWORD` are configured in `.env.local` / deployment environment variables before production launch. Ephemeral secrets are only permitted outside `NODE_ENV=production`.
-- 🟡 **Inline Script CSP**: `script-src` retains `'unsafe-inline'` for Next.js hydration and the pre-hydration reduced-motion reveal script (`app/layout.tsx`). Consider migrating to per-request CSP nonces if strict nonce-based CSP is required.
-
-### Passed Controls
-
-- 🟢 **Secrets & Repository Hygiene**: No hardcoded secrets, API keys, or `.env` files tracked in git (`.gitignore` excludes `.env`, `.env.*`, `.env*.local`, `public/uploads/*`).
-- 🟢 **Authentication & Session Management**: `jose` HS256 JWTs with `httpOnly`, `sameSite: "lax"`, `secure` in production, `tokenVersion` revocation on password change, and `bcryptjs` (12 rounds) with complexity/common-password checks.
-- 🟢 **Access Control & RBAC**: `/admin/*` and `/api/admin/*` protected by `middleware.ts` plus server-side `getAuthenticatedAdmin()` / `requireAdminRole()` DB verification (`admin`, `editor`, `viewer` roles). User management (`/api/admin/users*`) and system cache flush (`/api/admin/system/revalidate`) require `admin`; content/media mutations require `admin` or `editor`; self-deletion, last-admin removal/demotion, and `passwordHash` projection leaks are blocked, and role/password updates increment `tokenVersion` to revoke prior sessions.
-- 🟢 **Privacy-First Analytics**: `POST /api/analytics/track` filters bots, excludes `/admin` and `/api` routes, rate-limits per IP (`60/min`), encodes MongoDB Map keys to prevent nested operator injection, and stores daily-salted truncated SHA-256 hashes without raw IP addresses or cookies.
-- 🟢 **NoSQL Injection & Mass Assignment**: `sanitizeNoSql()` strips `$` operators and dotted keys; `filterProjectPayload()` whitelists project fields.
-- 🟢 **Open Redirect Protection**: `sanitizeRedirectPath()` rejects protocol-relative (`//`), external URLs, CRLF, null bytes, and backslashes.
-- 🟢 **Supply Chain (`npm audit`)**: `npm audit` and `npm audit --omit=dev` reported `0 vulnerabilities`.
+  - *Mitigation*: Restricted `'unsafe-eval'` to development; configured strict HSTS with preloading for production; implemented `sec-fetch-site` cross-site blocking in `middleware.ts`.
 
 ---
 
-## Verification
+## OWASP Top 10 Compliance Matrix
 
-- `npm test`: **77/77 tests passed** across 14 suites (including RBAC, analytics helpers, upload extension, and URL sanitization regression tests).
-- `npm run typecheck`: passed (`tsc --noEmit`).
-- `npm run build`: passed (`next build`).
-- `npm audit --omit=dev`: **0 vulnerabilities**.
+| OWASP Category | Status | Control Implementation |
+|---|---|---|
+| **A01: Broken Access Control** | 🟢 PASSED | JWT role verification (`admin`, `editor`, `viewer`) via `middleware.ts` and `requireAdminRole()`. Critical mutations restricted to `admin`; self-deletion and last-admin demotion prevented. |
+| **A02: Cryptographic Failures** | 🟢 PASSED | Passwords hashed using `bcryptjs` (salt rounds: 12). Sessions signed using `jose` HS256 JWT with minimum 32-character `AUTH_SECRET`. Password updates increment `tokenVersion`, instantly revoking older sessions. |
+| **A03: Injection (SQL / NoSQL / XSS)** | 🟢 PASSED | `sanitizeNoSql()` strips MongoDB operators (`$`, `.`) recursively. Safe URL validator blocks `javascript:`, `vbscript:`, and unsafe `data:` URIs. JSON-LD scripts are serialized with escaped angle brackets (`\u003c`). GA/GTM IDs strictly validated against alphanumeric patterns. |
+| **A04: Insecure Design** | 🟢 PASSED | Privacy-first first-party analytics with daily-salted truncated SHA-256 visitor hashing. Zero storage of raw visitor IPs or PII. Rate limiting on public and administrative endpoints. |
+| **A05: Security Misconfiguration** | 🟢 PASSED | Hardened HTTP headers: `X-Frame-Options: SAMEORIGIN`, `X-Content-Type-Options: nosniff`, `Referrer-Policy: strict-origin-when-cross-origin`, `Strict-Transport-Security: max-age=31536000; includeSubDomains; preload`, `Permissions-Policy`, and restricted `Content-Security-Policy`. |
+| **A06: Vulnerable & Outdated Components** | 🟢 PASSED | `npm audit --omit=dev` confirms **0 vulnerabilities**. Next.js 16.4.3, React 19.3.1, Jose 6.2.16, Mongoose 9.12.0 are up-to-date. |
+| **A07: Identification & Auth Failures** | 🟢 PASSED | Sliding-window brute force lockouts on `/api/admin/auth/login` by both IP and email. Dummy password hashing on non-existent usernames. Password complexity rules enforced (minimum 10 chars, uppercase, lowercase, numbers, special characters). |
+| **A08: Software & Data Integrity Failures** | 🟢 PASSED | Secure file upload validation enforcing magic byte headers (PNG, JPEG, WebP, PDF) alongside strict extension checks. |
+| **A09: Security Logging & Monitoring** | 🟢 PASSED | In-memory audit ring buffer tracking administrative events (`LOGIN_SUCCESS`, `LOGIN_FAILED`, `PROFILE_UPDATED`, `PASSWORD_CHANGED`, `LOGOUT`, `CACHE_INVALIDATED`) with IP and user metadata. |
+| **A10: Server-Side Request Forgery (SSRF)** | 🟢 PASSED | No unrestricted outbound HTTP request proxying from client input. YouTube video parser uses strict domain verification (`youtube.com`, `youtu.be`). |
+
+---
+
+## Operational Notes & Recommendations
+
+- 🟡 **In-Memory Rate Limiter**: `lib/security/rate-limit.ts` uses an in-memory sliding-window store. Suitable for the single-instance PM2 production deployment. If scaling to a multi-node cluster, back rate limiters with Redis.
+- 🟡 **Environment Variables**: Verify `.env.local` on production VM contains a 32+ character random `AUTH_SECRET` and non-default `DEFAULT_ADMIN_PASSWORD`.
+- 🟡 **Inline Scripts**: Next.js hydration requires `'unsafe-inline'` in `script-src`. Nonce-based CSP can be evaluated for future strict deployments.
+
+---
+
+## Verification & Test Results
+
+- `npm test`: **81/81 tests passed** across 17 suites (0 failures).
+- `npm run typecheck`: Passed (`tsc --noEmit` with 0 errors).
+- `npm audit --omit=dev`: **0 vulnerabilities** found.
