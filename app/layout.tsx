@@ -3,6 +3,7 @@ import { Inter } from "next/font/google";
 import Script from "next/script";
 import { Footer } from "@/components/Footer";
 import { Header } from "@/components/Header";
+import { GoogleAnalytics } from "@/components/GoogleAnalytics";
 import { PublicOnly } from "@/components/PublicOnly";
 import { SiteEffects } from "@/components/SiteEffects";
 import { profile as staticProfile, site } from "@/content/site";
@@ -122,8 +123,11 @@ export default async function RootLayout({ children }: { children: React.ReactNo
     <html lang="en" className={inter.variable} data-scroll-behavior="smooth" suppressHydrationWarning>
       <head>
         <link rel="dns-prefetch" href="https://i.ytimg.com" />
+        <link rel="dns-prefetch" href="https://www.googletagmanager.com" />
+        <link rel="dns-prefetch" href="https://www.google-analytics.com" />
       </head>
       <body className="flex min-h-screen flex-col" suppressHydrationWarning>
+        <GoogleAnalytics measurementId={profile.siteMeta?.googleAnalyticsId} />
         <Script id="reveal-init" strategy="beforeInteractive">
           {revealScript}
         </Script>

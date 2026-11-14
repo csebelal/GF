@@ -23,13 +23,15 @@ const securityHeaders = [
     key: "Content-Security-Policy",
     value: [
       "default-src 'self'",
-      isProd ? "script-src 'self' 'unsafe-inline'" : "script-src 'self' 'unsafe-inline' 'unsafe-eval'",
+      isProd
+        ? "script-src 'self' 'unsafe-inline' https://www.googletagmanager.com"
+        : "script-src 'self' 'unsafe-inline' 'unsafe-eval' https://www.googletagmanager.com",
       "style-src 'self' 'unsafe-inline'",
-      "img-src 'self' data: blob: https://i.ytimg.com https://img.youtube.com https://images.unsplash.com",
+      "img-src 'self' data: blob: https://i.ytimg.com https://img.youtube.com https://images.unsplash.com https://www.google-analytics.com https://*.google-analytics.com https://*.googletagmanager.com",
       "font-src 'self' data:",
       "frame-src https://www.youtube.com https://www.youtube-nocookie.com",
       "frame-ancestors 'self'",
-      "connect-src 'self'",
+      "connect-src 'self' https://*.google-analytics.com https://*.analytics.google.com https://*.googletagmanager.com",
       "object-src 'none'",
       "base-uri 'self'",
       "form-action 'self'",

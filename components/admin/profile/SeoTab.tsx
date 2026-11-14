@@ -49,6 +49,27 @@ export function SeoTab({ profile, setProfile }: ProfileTabProps) {
         )}
       </AdminField>
 
+      <AdminField label="Google Analytics Measurement ID (GA4)">
+        {({ id }) => (
+          <input
+            id={id}
+            type="text"
+            value={profile.siteMeta?.googleAnalyticsId || ""}
+            onChange={(e) =>
+              setProfile({
+                ...profile,
+                siteMeta: {
+                  ...profile.siteMeta,
+                  googleAnalyticsId: e.target.value.toUpperCase().trim(),
+                },
+              })
+            }
+            placeholder="e.g. G-XXXXXXXXXX"
+            className={adminInputClass}
+          />
+        )}
+      </AdminField>
+
       <AdminField label="Home Page Featured Walkthrough Project Slug">
         {({ id }) => (
           <input

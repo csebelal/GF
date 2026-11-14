@@ -579,6 +579,7 @@ export async function getDbProfile(): Promise<ISiteProfile> {
           titleSuffix: doc.siteMeta?.titleSuffix || staticSite.titleSuffix,
           description: doc.siteMeta?.description || staticSite.description,
           url: doc.siteMeta?.url || staticSite.url,
+          googleAnalyticsId: doc.siteMeta?.googleAnalyticsId || "",
         },
         homeSettings: {
           featuredProjectSlugs: doc.homeSettings?.featuredProjectSlugs || [...staticHomeSettings.featuredProjectSlugs],
@@ -720,6 +721,7 @@ export async function getDbProfile(): Promise<ISiteProfile> {
       titleSuffix: staticSite.titleSuffix,
       description: staticSite.description,
       url: staticSite.url,
+      googleAnalyticsId: "",
     },
     homeSettings: {
       featuredProjectSlugs: [...staticHomeSettings.featuredProjectSlugs],

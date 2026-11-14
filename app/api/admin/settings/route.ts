@@ -1,4 +1,5 @@
 import { NextResponse } from "next/server";
+import { revalidatePath } from "next/cache";
 import {
   getAuthenticatedAdmin,
   getAuthenticatedAdminLean,
@@ -7,6 +8,9 @@ import {
 } from "@/lib/auth/session";
 import { connectDB } from "@/lib/db/connection";
 import { AdminModel } from "@/lib/db/models/Admin";
+import { SiteProfileModel } from "@/lib/db/models/SiteProfile";
+import { getDbProfile, invalidateRepositoryCache } from "@/lib/db/repository";
+import { isValidGoogleAnalyticsId } from "@/components/GoogleAnalytics";
 import { logSecurityEvent } from "@/lib/security/audit";
 
 export async function GET() {
@@ -14,6 +18,8 @@ export async function GET() {
   if (!admin) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
+
+  const profile = await getDbProfile();
 
   return NextResponse.json(
     {
@@ -23,6 +29,7 @@ export async function GET() {
         role: admin.role,
         lastLogin: admin.lastLogin,
       },
+      googleAnalyticsId: profile.siteMeta?.googleAnalyticsId || "",
     },
     { headers: { "Cache-Control": "private, no-store" } }
   );
@@ -42,6 +49,54 @@ export async function PUT(request: Request) {
       return NextResponse.json({ error: "Invalid JSON request body." }, { status: 400 });
     }
 
+    // 1. Handle Google Analytics Update
+    if (body?.googleAnalyticsId !== undefined) {
+      const rawGaId = typeof body.googleAnalyticsId === "string" ? body.googleAnalyticsId.trim() : "";
+      const cleanGaId = rawGaId.toUpperCase();
+
+      if (cleanGaId !== "" && !isValidGoogleAnalyticsId(cleanGaId)) {
+        return NextResponse.json(
+          {
+            error:
+              "Invalid Measurement ID format. Google Analytics 4 IDs must start with 'G-' followed by alphanumeric characters (e.g. G-ABC123XYZ).",
+          },
+          { status: 400 }
+        );
+      }
+
+      await connectDB();
+      await SiteProfileModel.updateOne(
+        {},
+        { $set: { "siteMeta.googleAnalyticsId": cleanGaId } }
+      );
+
+      invalidateRepositoryCache();
+      try {
+        revalidatePath("/", "layout");
+      } catch (e) {
+        console.warn("Revalidation warning:", e);
+      }
+
+      logSecurityEvent("SETTINGS_GA_UPDATED", {
+        req: request,
+        user: admin.email,
+        status: "SUCCESS",
+        details: { googleAnalyticsId: cleanGaId },
+      });
+
+      // If only updating Google Analytics, respond immediately
+      if (!body?.email && !body?.name) {
+        return NextResponse.json({
+          success: true,
+          googleAnalyticsId: cleanGaId,
+          message: cleanGaId
+            ? "Google Analytics Measurement ID saved and activated."
+            : "Google Analytics tracking disabled.",
+        });
+      }
+    }
+
+    // 2. Handle Admin Account Update
     const email = typeof body?.email === "string" ? body.email.toLowerCase().trim() : "";
     const name = typeof body?.name === "string" ? body.name.trim().slice(0, 100) : "";
 
@@ -85,6 +140,7 @@ export async function PUT(request: Request) {
     const response = NextResponse.json({
       success: true,
       admin: { email: admin.email, name: admin.name, role: admin.role },
+      message: "Account details updated successfully.",
     });
 
     response.cookies.set({
@@ -99,7 +155,7 @@ export async function PUT(request: Request) {
 
     return response;
   } catch (err: any) {
-    console.error("Update admin profile error:", err);
+    console.error("Update admin settings error:", err);
     return NextResponse.json(
       { error: "An unexpected error occurred while updating settings." },
       { status: 500 }

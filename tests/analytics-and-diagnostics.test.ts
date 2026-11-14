@@ -187,3 +187,22 @@ describe("seo/geo/aeo schema builders", () => {
     assert.equal(faq.mainEntity.length, 1);
   });
 });
+
+describe("Google Analytics validation", () => {
+  it("accepts valid GA4 and UA IDs and rejects malformed or unsafe IDs", async () => {
+    const { isValidGoogleAnalyticsId } = await import("../components/GoogleAnalytics");
+
+    assert.equal(isValidGoogleAnalyticsId("G-ABC1234567"), true);
+    assert.equal(isValidGoogleAnalyticsId("g-xyz9876543"), true);
+    assert.equal(isValidGoogleAnalyticsId("UA-123456-1"), true);
+
+    // Rejection cases
+    assert.equal(isValidGoogleAnalyticsId(""), false);
+    assert.equal(isValidGoogleAnalyticsId(undefined), false);
+    assert.equal(isValidGoogleAnalyticsId("   "), false);
+    assert.equal(isValidGoogleAnalyticsId("G-"), false);
+    assert.equal(isValidGoogleAnalyticsId("<script>alert(1)</script>"), false);
+    assert.equal(isValidGoogleAnalyticsId("G-ABC'; DROP TABLE;--"), false);
+    assert.equal(isValidGoogleAnalyticsId("G-INVALID_CHAR!"), false);
+  });
+});

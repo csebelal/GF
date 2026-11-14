@@ -196,6 +196,7 @@ export interface ISiteProfile {
     titleSuffix: string;
     description: string;
     url: string;
+    googleAnalyticsId?: string;
   };
   homeSettings: {
     featuredProjectSlugs: string[];
@@ -250,6 +251,7 @@ const SiteProfileSchema = new Schema<ISiteProfile>(
       titleSuffix: { type: String, default: "Afrin Akter Chishti — Salesforce Administrator" },
       description: { type: String, default: "" },
       url: { type: String, default: "" },
+      googleAnalyticsId: { type: String, default: "" },
     },
     homeSettings: {
       featuredProjectSlugs: { type: [String], default: [] },

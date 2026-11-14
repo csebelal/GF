@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { Alert, Check, Eye, EyeOff, Lock, Mail, User } from "@/components/Icons";
+import { Activity, Alert, Check, Eye, EyeOff, Lock, Mail, User } from "@/components/Icons";
 import { UsersManager } from "@/components/admin/UsersManager";
 
 const focusRing =
@@ -30,6 +30,11 @@ export default function AdminSettingsPage() {
     null
   );
 
+  // Google Analytics state
+  const [googleAnalyticsId, setGoogleAnalyticsId] = useState("");
+  const [savingGa, setSavingGa] = useState(false);
+  const [gaMsg, setGaMsg] = useState<{ text: string; type: "success" | "error" } | null>(null);
+
   useEffect(() => {
     fetch("/api/admin/settings")
       .then((res) => res.json())
@@ -38,6 +43,9 @@ export default function AdminSettingsPage() {
           setName(data.admin.name || "");
           setEmail(data.admin.email || "");
           setRole(data.admin.role || "admin");
+        }
+        if (data.googleAnalyticsId !== undefined) {
+          setGoogleAnalyticsId(data.googleAnalyticsId || "");
         }
         setLoading(false);
       })
@@ -107,6 +115,32 @@ export default function AdminSettingsPage() {
       setPasswordMsg({ text: msg, type: "error" });
     } finally {
       setSavingPassword(false);
+    }
+  };
+
+  const handleSaveGoogleAnalytics = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setSavingGa(true);
+    setGaMsg(null);
+
+    try {
+      const res = await fetch("/api/admin/settings", {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ googleAnalyticsId }),
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error);
+
+      setGaMsg({
+        text: data.message || "Google Analytics setting updated successfully.",
+        type: "success",
+      });
+    } catch (err: unknown) {
+      const msg = err instanceof Error ? err.message : "Failed to update Google Analytics.";
+      setGaMsg({ text: msg, type: "error" });
+    } finally {
+      setSavingGa(false);
     }
   };
 
@@ -340,6 +374,97 @@ export default function AdminSettingsPage() {
           </div>
         </form>
       </div>
+
+      {/* 3. Google Analytics Integration (GA4) */}
+      <form
+        onSubmit={handleSaveGoogleAnalytics}
+        className="space-y-4 rounded-2xl border border-[#e2ddd3] bg-white p-5 shadow-[0_1px_3px_rgba(25,28,32,0.04)] transition-shadow duration-200 hover:shadow-[0_4px_14px_rgba(25,28,32,0.06)]"
+      >
+        <div className="flex flex-wrap items-center justify-between gap-3 border-b border-[#e6e1d8] pb-3">
+          <div className="flex items-center gap-2">
+            <Activity className="size-4 text-[#0e5f5b]" />
+            <h3 className="text-xs font-bold uppercase tracking-[0.08em] text-[#0e5f5b]">
+              3. Google Analytics Integration (GA4)
+            </h3>
+          </div>
+          <span
+            className={`inline-flex items-center gap-1.5 rounded-full px-2.5 py-0.5 text-[11px] font-semibold ${
+              googleAnalyticsId.trim()
+                ? "bg-emerald-50 text-emerald-800 ring-1 ring-emerald-200"
+                : "bg-stone-100 text-stone-600 ring-1 ring-stone-200"
+            }`}
+          >
+            <span
+              className={`size-1.5 rounded-full ${
+                googleAnalyticsId.trim() ? "bg-emerald-500 animate-pulse" : "bg-stone-400"
+              }`}
+            />
+            {googleAnalyticsId.trim() ? "Active (Tracking Enabled)" : "Disabled / Not Set"}
+          </span>
+        </div>
+
+        {gaMsg ? (
+          <div
+            role={gaMsg.type === "error" ? "alert" : "status"}
+            aria-live="polite"
+            className={`flex items-start gap-2 rounded-xl border p-3 text-xs ${
+              gaMsg.type === "success"
+                ? "border-green-200 bg-green-50 text-[#166534]"
+                : "border-red-200 bg-red-50 text-[#991b1b]"
+            }`}
+          >
+            {gaMsg.type === "success" ? (
+              <Check className="mt-0.5 size-4 shrink-0" />
+            ) : (
+              <Alert className="mt-0.5 size-4 shrink-0" />
+            )}
+            <span>{gaMsg.text}</span>
+          </div>
+        ) : null}
+
+        <div className="grid gap-4 lg:grid-cols-3">
+          <div className="lg:col-span-2">
+            <label
+              htmlFor="settings-ga-id"
+              className="block text-xs font-semibold text-[#4c535b]"
+            >
+              Google Analytics Measurement ID
+            </label>
+            <div className="relative mt-1.5">
+              <input
+                id="settings-ga-id"
+                name="googleAnalyticsId"
+                type="text"
+                placeholder="e.g. G-XXXXXXXXXX"
+                value={googleAnalyticsId}
+                onChange={(e) => setGoogleAnalyticsId(e.target.value.toUpperCase().trim())}
+                className={`${inputClass} font-mono`}
+              />
+            </div>
+            <p className="mt-1.5 text-[11px] text-[#646b73]">
+              Enter your Google Analytics 4 Measurement ID starting with <code className="font-mono text-[#0e5f5b]">G-</code>.
+              Leave empty and save to disable tracking.
+            </p>
+          </div>
+
+          <div className="rounded-xl border border-[#ece8df] bg-[#faf8f4] p-3 text-xs text-[#4c535b]">
+            <p className="font-semibold text-[#191c20]">Privacy &amp; Auto-Exclusion</p>
+            <p className="mt-1 text-[11px] leading-relaxed text-[#646b73]">
+              Google Analytics tracking tags will automatically load across all public visitor pages. All internal <code className="font-mono text-xs">/admin/*</code> dashboard routes are automatically excluded from analytics metrics.
+            </p>
+          </div>
+        </div>
+
+        <div className="flex justify-end border-t border-[#f0ede6] pt-3">
+          <button
+            type="submit"
+            disabled={savingGa}
+            className={`inline-flex min-h-[38px] cursor-pointer items-center rounded-xl bg-[#0e5f5b] px-4 py-1.5 text-xs font-semibold text-white shadow-sm transition-all duration-200 hover:bg-[#0a4744] disabled:cursor-not-allowed disabled:opacity-50 ${focusRing}`}
+          >
+            {savingGa ? "Saving..." : "Save Analytics Setting"}
+          </button>
+        </div>
+      </form>
 
       {/* User & Role Management (Admin only) */}
       {role === "admin" ? <UsersManager currentUserEmail={email} /> : null}
