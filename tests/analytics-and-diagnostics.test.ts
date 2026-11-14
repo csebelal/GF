@@ -189,11 +189,13 @@ describe("seo/geo/aeo schema builders", () => {
 });
 
 describe("Google Analytics validation", () => {
-  it("accepts valid GA4 and UA IDs and rejects malformed or unsafe IDs", async () => {
-    const { isValidGoogleAnalyticsId } = await import("../components/GoogleAnalytics");
+  it("accepts valid GA4, GTM, and UA IDs and rejects malformed or unsafe IDs", async () => {
+    const { isValidGoogleAnalyticsId } = await import("../lib/analytics/validators");
 
     assert.equal(isValidGoogleAnalyticsId("G-ABC1234567"), true);
-    assert.equal(isValidGoogleAnalyticsId("g-xyz9876543"), true);
+    assert.equal(isValidGoogleAnalyticsId("G-K7MDDXHF72"), true);
+    assert.equal(isValidGoogleAnalyticsId("GTM-WFSN9MSW"), true);
+    assert.equal(isValidGoogleAnalyticsId("gtm-1234abc"), true);
     assert.equal(isValidGoogleAnalyticsId("UA-123456-1"), true);
 
     // Rejection cases
@@ -201,6 +203,7 @@ describe("Google Analytics validation", () => {
     assert.equal(isValidGoogleAnalyticsId(undefined), false);
     assert.equal(isValidGoogleAnalyticsId("   "), false);
     assert.equal(isValidGoogleAnalyticsId("G-"), false);
+    assert.equal(isValidGoogleAnalyticsId("GTM-"), false);
     assert.equal(isValidGoogleAnalyticsId("<script>alert(1)</script>"), false);
     assert.equal(isValidGoogleAnalyticsId("G-ABC'; DROP TABLE;--"), false);
     assert.equal(isValidGoogleAnalyticsId("G-INVALID_CHAR!"), false);

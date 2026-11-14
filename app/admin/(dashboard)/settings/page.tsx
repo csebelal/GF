@@ -384,7 +384,7 @@ export default function AdminSettingsPage() {
           <div className="flex items-center gap-2">
             <Activity className="size-4 text-[#0e5f5b]" />
             <h3 className="text-xs font-bold uppercase tracking-[0.08em] text-[#0e5f5b]">
-              3. Google Analytics Integration (GA4)
+              3. Google Analytics &amp; Tag Manager (GA4 / GTM)
             </h3>
           </div>
           <span
@@ -428,21 +428,21 @@ export default function AdminSettingsPage() {
               htmlFor="settings-ga-id"
               className="block text-xs font-semibold text-[#4c535b]"
             >
-              Google Analytics Measurement ID
+              Measurement ID or GTM Container ID
             </label>
             <div className="relative mt-1.5">
               <input
                 id="settings-ga-id"
                 name="googleAnalyticsId"
                 type="text"
-                placeholder="e.g. G-XXXXXXXXXX"
+                placeholder="e.g. G-K7MDDXHF72 or GTM-WFSN9MSW"
                 value={googleAnalyticsId}
                 onChange={(e) => setGoogleAnalyticsId(e.target.value.toUpperCase().trim())}
                 className={`${inputClass} font-mono`}
               />
             </div>
             <p className="mt-1.5 text-[11px] text-[#646b73]">
-              Enter your Google Analytics 4 Measurement ID starting with <code className="font-mono text-[#0e5f5b]">G-</code>.
+              Enter your Google Analytics 4 ID (<code className="font-mono text-[#0e5f5b]">G-...</code>) or Google Tag Manager Container ID (<code className="font-mono text-[#0e5f5b]">GTM-...</code>).
               Leave empty and save to disable tracking.
             </p>
           </div>
@@ -450,7 +450,7 @@ export default function AdminSettingsPage() {
           <div className="rounded-xl border border-[#ece8df] bg-[#faf8f4] p-3 text-xs text-[#4c535b]">
             <p className="font-semibold text-[#191c20]">Privacy &amp; Auto-Exclusion</p>
             <p className="mt-1 text-[11px] leading-relaxed text-[#646b73]">
-              Google Analytics tracking tags will automatically load across all public visitor pages. All internal <code className="font-mono text-xs">/admin/*</code> dashboard routes are automatically excluded from analytics metrics.
+              Tracking tags will automatically load across all public visitor pages. All internal <code className="font-mono text-xs">/admin/*</code> dashboard routes are automatically excluded from analytics metrics.
             </p>
           </div>
         </div>

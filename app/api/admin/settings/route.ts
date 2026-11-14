@@ -10,7 +10,7 @@ import { connectDB } from "@/lib/db/connection";
 import { AdminModel } from "@/lib/db/models/Admin";
 import { SiteProfileModel } from "@/lib/db/models/SiteProfile";
 import { getDbProfile, invalidateRepositoryCache } from "@/lib/db/repository";
-import { isValidGoogleAnalyticsId } from "@/components/GoogleAnalytics";
+import { isValidGoogleAnalyticsId } from "@/lib/analytics/validators";
 import { logSecurityEvent } from "@/lib/security/audit";
 
 export async function GET() {
@@ -58,7 +58,7 @@ export async function PUT(request: Request) {
         return NextResponse.json(
           {
             error:
-              "Invalid Measurement ID format. Google Analytics 4 IDs must start with 'G-' followed by alphanumeric characters (e.g. G-ABC123XYZ).",
+              "Invalid format. Enter a valid Google Analytics 4 ID (e.g. G-K7MDDXHF72) or Google Tag Manager ID (e.g. GTM-WFSN9MSW).",
           },
           { status: 400 }
         );
