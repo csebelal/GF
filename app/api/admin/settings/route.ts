@@ -77,7 +77,7 @@ export async function PUT(request: Request) {
         console.warn("Revalidation warning:", e);
       }
 
-      logSecurityEvent("SETTINGS_GA_UPDATED", {
+      logSecurityEvent("PROFILE_UPDATED", {
         req: request,
         user: admin.email,
         status: "SUCCESS",
