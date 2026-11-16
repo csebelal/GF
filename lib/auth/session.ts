@@ -78,17 +78,28 @@ export async function verifySessionToken(token: string): Promise<SessionPayload 
 }
 
 /**
- * Reads and verifies the session token from cookies.
+ * Reads and verifies the session token from cookies or incoming request headers.
  */
-export async function getSession(): Promise<SessionPayload | null> {
+export async function getSession(req?: Request): Promise<SessionPayload | null> {
   try {
     const cookieStore = await cookies();
     const token = cookieStore.get(SESSION_COOKIE_NAME)?.value;
-    if (!token) return null;
-    return await verifySessionToken(token);
+    if (token) return await verifySessionToken(token);
   } catch {
-    return null;
+    // cookies() unavailable outside Next.js request context
   }
+
+  if (req) {
+    const cookieHeader = req.headers.get("cookie");
+    if (cookieHeader) {
+      const match = cookieHeader.match(new RegExp(`(?:^|;\\s*)${SESSION_COOKIE_NAME}=([^;]+)`));
+      if (match) {
+        return await verifySessionToken(match[1]);
+      }
+    }
+  }
+
+  return null;
 }
 
 export interface LeanAdminSession {
@@ -105,8 +116,8 @@ export interface LeanAdminSession {
  * verify admin identity and do not call `.save()`. Excludes `passwordHash` and
  * skips Mongoose document hydration.
  */
-export async function getAuthenticatedAdminLean(): Promise<LeanAdminSession | null> {
-  const session = await getSession();
+export async function getAuthenticatedAdminLean(req?: Request): Promise<LeanAdminSession | null> {
+  const session = await getSession(req);
   if (!session || !session.email) return null;
 
   try {
@@ -168,7 +179,7 @@ export async function requireAdminRole(
   | { admin: LeanAdminSession; errorResponse: null }
   | { admin: null; errorResponse: NextResponse }
 > {
-  const admin = await getAuthenticatedAdminLean();
+  const admin = await getAuthenticatedAdminLean(req);
   if (!admin) {
     return {
       admin: null,

@@ -3,6 +3,8 @@ import { requireAdminRole } from "@/lib/auth/session";
 import { validateUploadedFile } from "@/lib/security/file-validation";
 import { RateLimiters } from "@/lib/security/rate-limit";
 import { extractClientIp, logSecurityEvent } from "@/lib/security/audit";
+import { connectDB } from "@/lib/db/connection";
+import { MediaAssetModel } from "@/lib/db/models/MediaAsset";
 import path from "node:path";
 import fs from "node:fs/promises";
 
@@ -64,6 +66,23 @@ export async function POST(request: Request) {
     });
 
     const publicUrl = `/uploads/${filename}`;
+
+    try {
+      await connectDB();
+      const cleanOriginal = file.name.replace(/\.[^/.]+$/, "").replace(/[_-]+/g, " ").trim();
+      await MediaAssetModel.findOneAndUpdate(
+        { filename },
+        {
+          filename,
+          title: cleanOriginal,
+          uploadedBy: admin.email,
+          tags: [],
+        },
+        { upsert: true, new: true }
+      );
+    } catch (dbErr) {
+      console.warn("Could not save initial media asset record:", dbErr);
+    }
 
     return NextResponse.json({
       success: true,

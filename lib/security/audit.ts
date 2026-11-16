@@ -27,6 +27,8 @@ export type AuditAction =
   | "ADMIN_USER_CREATED"
   | "ADMIN_USER_UPDATED"
   | "ADMIN_USER_DELETED"
+  | "MEDIA_DELETED"
+  | "MEDIA_METADATA_UPDATED"
   | "CACHE_INVALIDATED";
 
 export interface AuditLogEntry {

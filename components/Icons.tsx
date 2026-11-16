@@ -125,6 +125,15 @@ export const Settings = (p: IconProps) => (
 export const LogOut = (p: IconProps) => (
   <Base {...p}><path d="M9 21H5.5A2.5 2.5 0 0 1 3 18.5v-13A2.5 2.5 0 0 1 5.5 3H9" /><path d="M16 17l5-5-5-5M21 12H9" /></Base>
 );
+export const Trash = (p: IconProps) => (
+  <Base {...p}><path d="M3 6h18M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2M10 11v6M14 11v6" /></Base>
+);
+export const Tag = (p: IconProps) => (
+  <Base {...p}><path d="M12 2H2v10l9.29 9.29c.94.94 2.48.94 3.42 0l6.58-6.58c.94-.94.94-2.48 0-3.42L12 2Z" /><circle cx="7" cy="7" r=".5" fill="currentColor" /></Base>
+);
+export const Edit = (p: IconProps) => (
+  <Base {...p}><path d="M17 3a2.85 2.83 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5Z" /></Base>
+);
 export const Plus = (p: IconProps) => (
   <Base {...p}><path d="M12 5v14M5 12h14" /></Base>
 );
