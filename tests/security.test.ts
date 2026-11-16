@@ -250,3 +250,54 @@ describe("Security Suite: JWT Session Security & Revocation", () => {
     assert.equal(verified.role, "editor");
   });
 });
+
+describe("Security Suite: Dynamic Uploads Asset Serving & Traversal Prevention", () => {
+  it("rejects path traversal attempts with 400 or 403", async () => {
+    const { GET } = await import("@/app/uploads/[...filename]/route");
+
+    // Traversal via ..
+    const res1 = await GET(new Request("http://localhost:3000/uploads/../../package.json"), {
+      params: Promise.resolve({ filename: ["..", "..", "package.json"] }),
+    });
+    assert.ok([400, 403, 404].includes(res1.status));
+
+    // Traversal via null bytes
+    const res2 = await GET(new Request("http://localhost:3000/uploads/test\0.png"), {
+      params: Promise.resolve({ filename: ["test\0.png"] }),
+    });
+    assert.equal(res2.status, 400);
+  });
+
+  it("returns 404 cleanly for missing files", async () => {
+    const { GET } = await import("@/app/uploads/[...filename]/route");
+    const res = await GET(new Request("http://localhost:3000/uploads/non-existent-file-12345.pdf"), {
+      params: Promise.resolve({ filename: ["non-existent-file-12345.pdf"] }),
+    });
+    assert.equal(res.status, 404);
+  });
+
+  it("serves existing files with correct headers and Content-Type", async () => {
+    const { GET } = await import("@/app/uploads/[...filename]/route");
+    const fs = await import("node:fs/promises");
+    const path = await import("node:path");
+
+    // Create a temporary test fixture in public/uploads
+    const uploadsDir = path.resolve(process.cwd(), "public", "uploads");
+    await fs.mkdir(uploadsDir, { recursive: true });
+    const testFile = path.resolve(uploadsDir, "test-serving-fixture.png");
+    await fs.writeFile(testFile, Buffer.from([0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a]));
+
+    try {
+      const res = await GET(new Request("http://localhost:3000/uploads/test-serving-fixture.png"), {
+        params: Promise.resolve({ filename: ["test-serving-fixture.png"] }),
+      });
+      assert.equal(res.status, 200);
+      assert.equal(res.headers.get("Content-Type"), "image/png");
+      assert.equal(res.headers.get("Cache-Control"), "public, max-age=31536000, immutable");
+      assert.equal(res.headers.get("X-Content-Type-Options"), "nosniff");
+    } finally {
+      await fs.unlink(testFile).catch(() => {});
+    }
+  });
+});
+
